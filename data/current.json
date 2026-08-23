@@ -1,68 +1,162 @@
 {
   "$schema": "./schema.json",
-  "id": "wintabs-3-mejoras-ui",
+  "id": "uctupus-bddiagram-mejoras-2026-08-23",
   "version": 1,
-  "title": "Plan de 3 mejoras de UI para WinTabs",
+  "title": "Plan de mejoras para Uctupus BD Diagram",
+  "description": "Propuesta basada en el estado actual del plugin. El objetivo no es añadir funciones genéricas que ya existen, sino mejorar edición, diagnóstico, comparación entre entornos, integración con Eclipse y mantenibilidad. Las tres primeras mejoras son las que priorizaría.",
   "sections": [
     {
-      "id": "barra-visual",
-      "title": "1. Rediseño visual de la barra principal",
+      "id": "undo-redo-autosave",
+      "title": "1. Undo/Redo global + recuperación automática",
+      "description": "Es la mejora de UX que implementaría primero.",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Mantendría la barra compacta actual, pero la haría visualmente más clara y moderna.\n\nAñadiría:\n\n- estados `hover`, pulsado y activo mucho más visibles;\n- fondo ligeramente translúcido con separación clara entre grupos;\n- tooltips homogéneos y más limpios;\n- pequeñas animaciones de entrada/salida y cambio de estado;\n- indicador discreto para el panel actualmente abierto;\n- espaciado y tamaños coherentes entre accesos, paneles y controles de audio.\n\nLa idea es mejorar bastante la percepción de calidad sin cambiar la forma de usar WinTabs ni aumentar mucho el tamaño de la barra.\n\n**Dificultad:** media.  \n**Impacto:** alto y visible constantemente."
-        },
-        {
-          "id": 2,
-          "text": "Cambiaría la barra a un diseño más parecido a un **dock flotante**, con botones independientes visualmente separados y una superficie semitransparente con esquinas redondeadas.\n\nLos iconos podrían aumentar ligeramente al pasar el ratón y los grupos —paneles, accesos y sistema— tendrían separadores o bloques propios. La barra dejaría de parecer una colección de tabs tradicionales y se acercaría más a una interfaz tipo macOS Dock / PowerToys.\n\nVisualmente sería un cambio bastante mayor y más atractivo, pero obligaría a rehacer parte del pintado, hit-testing, geometría de la media-tab y comportamiento en los cuatro bordes.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto, pero cambia bastante la identidad actual."
+          "text": "Implementaría un **Command Stack real** para que `Ctrl+Z` y `Ctrl+Y` funcionen sobre las operaciones del diagrama, no solo sobre un editor concreto.\n\nCubriría como mínimo:\n\n- mover y redimensionar nodos;\n- crear, eliminar o reconectar relaciones;\n- suprimir nodos y ramas;\n- cambiar alias, presentación y columnas visibles;\n- crear, mover, minimizar y eliminar grupos;\n- activar/desactivar ramas;\n- modificar recorridos manuales;\n- organizar todo, una rama o un grupo.\n\nAñadiría además un **autosave de recuperación** separado del `.bddiagram`, usado únicamente si Eclipse se cierra de forma inesperada. No debe sustituir al guardado normal ni ensuciar el fichero principal.\n\nLa base técnica sería un `DiagramCommandStack` con comandos reversibles y agrupación de operaciones continuas —por ejemplo, un arrastre completo debe producir un solo paso de deshacer—.\n\n**Dificultad:** media-alta.  \n**Impacto:** muy alto."
         }
       ],
       "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Añade un matiz sobre el estilo de la barra…"
+      "notePlaceholder": "Añade algún comportamiento que también deba poder deshacerse…"
     },
     {
-      "id": "paneles-ui",
-      "title": "2. Unificar y modernizar la UI de los paneles",
+      "id": "sql-inspector",
+      "title": "2. Inspector SQL, métricas y Explain Plan",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Crearía una **cabecera común para todos los paneles** —Notas, Alarmas y Grabaciones— con el mismo lenguaje visual y los controles importantes siempre en el mismo sitio.\n\nLa cabecera incluiría:\n\n- título e icono del módulo;\n- fijar/desfijar;\n- siempre encima;\n- cerrar;\n- acciones propias del módulo en una zona secundaria.\n\nTambién normalizaría márgenes, botones, estados vacíos, campos y jerarquía tipográfica para que los tres paneles parezcan partes de una misma aplicación y no interfaces independientes.\n\n**Dificultad:** media-alta.  \n**Impacto:** alto en consistencia y facilidad de uso."
-        },
-        {
-          "id": 2,
-          "text": "Iría a una interfaz de panel más ambiciosa con **sidebar interna y vistas**, de modo que cada panel pueda crecer sin llenar la pantalla de controles.\n\nPor ejemplo, Alarmas podría separar `Activas`, `Programadas` e `Historial`; Notas podría tener una lista lateral de notas y una zona de edición; Grabaciones podría separar `Nueva grabación` y `Biblioteca`.\n\nEsto daría mucho más margen para evolucionar cada módulo y mejoraría la navegación cuando haya bastante contenido, pero supone rehacer más profundamente cada `TabWidget`.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto si WinTabs va a seguir creciendo."
+          "text": "Añadiría un **Inspector de ejecución por nodo**. Después de ejecutar, al seleccionar una tabla o instancia se podría consultar exactamente qué hizo el motor.\n\nMostraría:\n\n- SQL generado;\n- bindings JDBC y batches;\n- número de filas recuperadas;\n- claves propagadas al siguiente nivel;\n- tiempo total y tiempo JDBC;\n- timeout y límite efectivos;\n- nodo padre o relación que provocó la consulta;\n- avisos de truncamiento o cardinalidad inesperada.\n\nAcciones útiles:\n\n- **Copiar SQL**;\n- **Copiar SQL con valores** para depuración;\n- **Ejecutar Explain Plan** y mostrar `DBMS_XPLAN` en una vista legible.\n\nNo lo convertiría en un editor SQL genérico: debe explicar las consultas que genera BD Diagram. Eso lo haría mucho más útil para investigar consultas lentas o resultados inesperados.\n\n**Dificultad:** media.  \n**Impacto:** muy alto."
         }
       ],
       "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Indica cómo quieres organizar los paneles…"
+      "notePlaceholder": "Indica otras métricas o datos de diagnóstico que quieras ver…"
     },
     {
-      "id": "preferencias-ui",
-      "title": "3. Rediseño de Preferencias con vista previa real",
+      "id": "compare-environments",
+      "title": "3. Comparar la misma exploración entre DEV / PRE / otros entornos",
+      "description": "Aprovecha directamente el modelo de conexiones, consultas y comparación estructural que ya existe.",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Reorganizaría **Preferencias** en una navegación lateral por categorías en lugar de concentrar tantos controles en una ventana tradicional.\n\nTendría secciones como:\n\n- `Barra`;\n- `Accesos`;\n- `Paneles`;\n- `Apariencia`;\n- `Alarmas y correo`;\n- `Avanzado`.\n\nA la derecha se mostraría únicamente la sección seleccionada, con controles más espaciados y descripciones breves. Mantendría la previsualización en tiempo real que ya existe, pero haría mucho más fácil encontrar cada ajuste.\n\n**Dificultad:** media.  \n**Impacto:** alto, especialmente cuando se añadan más opciones."
+          "text": "**Comparación de resultados completa.** Elegir dos conexiones, ejecutar exactamente el mismo diagrama con la misma consulta, parámetros y límites, y comparar los datos obtenidos.\n\nLa comparación debería trabajar por nodo usando PK o claves configurables y clasificar:\n\n- filas idénticas;\n- filas modificadas;\n- filas solo en origen;\n- filas solo en destino.\n\nEn el lienzo cada nodo podría mostrar un resumen `= / ≠ / + / -`, y una ventana de diferencias permitiría bajar hasta columna y valor. También permitiría saltar directamente a la fila distinta.\n\nEsta opción convierte BD Diagram en una herramienta muy potente para validar diferencias entre entornos.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto."
         },
         {
           "id": 2,
-          "text": "Convertiría Preferencias en un **editor visual de WinTabs**. La parte izquierda mostraría una representación interactiva de la barra y los paneles, y la derecha las propiedades del elemento seleccionado.\n\nSe podría pulsar un tab de la maqueta para cambiar tamaño, visibilidad, orden o comportamiento, y arrastrar elementos directamente para reorganizarlos. Los cambios se verían simultáneamente en la barra real.\n\nSería una experiencia mucho más intuitiva y diferenciadora, pero exige construir una capa de preview bastante más compleja que el formulario actual.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto en experiencia de configuración."
+          "text": "**Comparación ligera por nodo seleccionado.** En vez de duplicar toda la ejecución, permitir comparar únicamente el nodo actual o una rama contra una segunda conexión.\n\nReutilizaría la ejecución normal para el primer entorno y lanzaría una segunda consulta solo para el elemento elegido. Sería más sencilla, consumiría menos recursos y permitiría entregar la función antes, pero no ofrecería una visión completa de todas las diferencias del diagrama.\n\n**Dificultad:** media-alta.  \n**Impacto:** alto."
         }
       ],
       "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Añade preferencias sobre cómo debería configurarse WinTabs…"
+      "notePlaceholder": "Por ejemplo: cómo identificar filas cuando una tabla no tenga PK…"
+    },
+    {
+      "id": "eclipse-editor",
+      "title": "4. Integración nativa de `.bddiagram` con Eclipse",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Convertiría `.bddiagram` en un **editor Eclipse real** mediante `org.eclipse.ui.editors`.\n\nEso permitiría:\n\n- doble clic desde Project/Package Explorer;\n- icono y asociación de fichero propios;\n- pestaña de editor normal;\n- `Ctrl+S` y dirty state estándar;\n- `Open With > BD Diagram`;\n- integración con navegación y ciclo de vida del workbench.\n\nLa UI principal debería desacoplarse de `BdDiagramDialog` para poder alojarse dentro de un `EditorPart` sin duplicar lógica. Las ventanas auxiliares —datos grandes, gestores, comparación— pueden seguir siendo ventanas no modales.\n\n**Dificultad:** media-alta.  \n**Impacto:** alto."
+        },
+        {
+          "id": 2,
+          "text": "Mantener la **ventana independiente actual** como superficie principal y añadir únicamente asociación de fichero, menú contextual y comandos Eclipse para abrirla.\n\nLa integración sería menor pero también mucho menos invasiva: el `.bddiagram` seguiría abriéndose en su ventana propia, conservando exactamente el comportamiento actual de tamaño, maximizado y paneles.\n\n**Dificultad:** baja-media.  \n**Impacto:** medio."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "export-snapshots",
+      "title": "5. Exportación de resultados y snapshots",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Mantendría `.bddiagram` libre de resultados, pero añadiría exportación explícita.\n\n**Por nodo:** CSV, TSV, JSON y SQL `INSERT`.\n\n**Por exploración completa:** JSON jerárquico y ZIP con un CSV por nodo/tabla.\n\nAñadiría además **snapshots de ejecución** independientes que guarden conexión lógica —sin credenciales—, fecha, consulta, parámetros y resultados. Un snapshot podría abrirse sin Oracle y compararse posteriormente con una nueva ejecución.\n\nEsto permitiría conservar evidencias de un caso, compartir resultados y detectar regresiones de datos sin cambiar la filosofía del formato `.bddiagram`.\n\n**Dificultad:** media.  \n**Impacto:** alto."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "global-search",
+      "title": "6. Buscador global del diagrama",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Implementaría `Ctrl+F` como **buscador único** de la ventana principal.\n\nBuscaría simultáneamente en:\n\n- alias y nombre físico de tabla/vista;\n- columnas;\n- FK y relaciones manuales;\n- grupos;\n- consultas y parámetros;\n- resultados actualmente cargados.\n\nLos resultados aparecerían agrupados por tipo. Al pulsar uno, el lienzo centra y selecciona el nodo correspondiente y, cuando proceda, resalta columna, relación o fila.\n\nPara diagramas grandes sería más útil que mantener búsquedas independientes repartidas por distintos paneles.\n\n**Dificultad:** baja-media.  \n**Impacto:** alto en diagramas grandes."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "row-lineage",
+      "title": "7. Trazabilidad: «¿por qué ha aparecido esta fila?»",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Añadiría una acción **Mostrar origen de esta fila**. Al seleccionar una fila, BD Diagram reconstruiría la cadena exacta de claves que hizo que fuese recuperada.\n\nEjemplo conceptual:\n\n```text\nEXPEDIENTE #8127\n  ↓ EXPEDIENTE.ID = TASK.EXPEDIENTE_ID\nTASK #182732\n  ↓ TASK.USER_ID = USER.ID\nUSER #9281\n```\n\nEl lienzo atenuaría el resto del diagrama y resaltaría únicamente los nodos, relaciones y filas implicados. En cada salto se mostrarían las columnas y valores que hicieron match.\n\nTambién debería funcionar con relaciones manuales y asociaciones secundarias cuando exista información suficiente. Esta característica encaja especialmente bien con el objetivo de exploración de datos relacionados y haría al plugin bastante diferencial.\n\n**Dificultad:** media-alta.  \n**Impacto:** muy alto para depuración funcional."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "refactor-main-ui",
+      "title": "8. Refactor de la UI principal y controladores",
+      "description": "`BdDiagramDialog` ya concentra demasiadas responsabilidades; conviene reducirlo antes de seguir creciendo.",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "**Refactor incremental orientado a responsabilidades.** Extraería primero componentes que además habilitan mejoras funcionales:\n\n- `DiagramCommandStack`;\n- `DiagramSelectionController`;\n- `DiagramExecutionController`;\n- `DiagramPersistenceController`;\n- `ExecutionPanel`;\n- `RelationTreePanel`;\n- `ResultPanel`;\n- `NodeDetailsPanel`.\n\nEl diálogo/editor se quedaría como coordinador y el `canvas` mantendría renderizado, hit-testing y gestos. Se haría por bloques pequeños, manteniendo el plugin ejecutable después de cada extracción.\n\nEsta opción reduce riesgo y puede hacerse a la vez que Undo/Redo e integración como editor Eclipse.\n\n**Dificultad:** alta, pero controlable.  \n**Impacto técnico:** muy alto."
+        },
+        {
+          "id": 2,
+          "text": "**Reestructuración profunda de una vez.** Separar modelo de sesión, comandos, servicios, paneles y canvas en una nueva arquitectura antes de añadir más funciones.\n\nEl resultado final podría ser más limpio, pero implica una modificación transversal enorme sobre una clase y una UI que ya funcionan, con mucho más riesgo de regresiones y un periodo largo donde los cambios funcionales serían difíciles de integrar.\n\n**Dificultad:** muy alta.  \n**Impacto técnico:** muy alto, con mayor riesgo."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "tests-ci",
+      "title": "9. Convertir SelfTests en tests automatizados + CI",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Convertiría progresivamente los `*SelfTest` existentes en **JUnit/PDE JUnit** ejecutables automáticamente y añadiría un pipeline de CI.\n\nPrioridad de pruebas:\n\n1. migración de `.bddiagram` v1/v2/v3/v4;\n2. parser DDL y metadata;\n3. árbol de relaciones, múltiples raíces y autorrelaciones;\n4. merge e importación;\n5. layout;\n6. generación SQL y propagación de claves;\n7. comparación de esquema.\n\nEl pipeline debería al menos compilar, ejecutar tests y producir el plugin como artefacto. No hace falta cambiar el flujo diario del proyecto a Maven si no aporta valor: el build headless puede existir únicamente para CI/release.\n\n**Dificultad:** media.  \n**Impacto técnico:** alto."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
     }
   ]
 }
