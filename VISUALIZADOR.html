@@ -3,47 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Visualizador de código - prueba3.html</title>
+<title>Visualizador - prueba3.html</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;padding:0;background:#0d1117;color:#c9d1d9;font-family:Consolas,"Courier New",monospace}body{padding:8px}.top{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}.title{font-family:"Segoe UI",Arial,sans-serif;font-weight:700;font-size:16px;margin-right:auto}.btn{border:1px solid #30363d;background:#21262d;color:#c9d1d9;border-radius:6px;padding:6px 10px;cursor:pointer}.btn:hover{background:#30363d}.status{font-family:"Segoe UI",Arial,sans-serif;font-size:12px;color:#8b949e}.code-wrap{border:1px solid #30363d;border-radius:6px;overflow:auto;background:#010409;min-height:calc(100vh - 55px)}pre{margin:0;padding:8px;white-space:pre;tab-size:4;font-size:13px;line-height:1.35}code{font-family:inherit}.error{color:#ff7b72}.ok{color:#3fb950}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:"Segoe UI",Arial,sans-serif;background:#111;color:#fff}.top{height:42px;display:flex;align-items:center;gap:8px;padding:4px 6px;background:#171717;border-bottom:1px solid #333}.title{font-weight:700;font-size:14px;margin-right:auto}.status{font-size:12px;color:#aaa}.btn{border:1px solid #444;background:#262626;color:#fff;border-radius:5px;padding:5px 9px;cursor:pointer}.btn:hover{background:#333}.viewer{width:100%;height:calc(100vh - 42px);border:0;background:#fff;display:block}
 </style>
 </head>
 <body>
 <div class="top">
-  <div class="title">Código fuente de prueba3.html</div>
+  <div class="title">prueba3.html</div>
   <span id="status" class="status">Cargando…</span>
   <button class="btn" id="reload">Recargar</button>
-  <button class="btn" id="copy">Copiar código</button>
+  <button class="btn" id="open">Abrir sola</button>
 </div>
-<div class="code-wrap"><pre><code id="code">Cargando código…</code></pre></div>
+<iframe id="viewer" class="viewer" title="prueba3.html"></iframe>
 <script>
-const RAW_URL='https://raw.githubusercontent.com/ddadda69/GPT_DUDAS/main/prueba3.html';
-const code=document.getElementById('code');
+const TARGET='https://ddadda69.github.io/GPT_DUDAS/prueba3.html';
+const frame=document.getElementById('viewer');
 const status=document.getElementById('status');
-let current='';
-async function load(){
-  status.textContent='Cargando…'; status.className='status';
-  try{
-    const sep=RAW_URL.includes('?')?'&':'?';
-    const r=await fetch(RAW_URL+sep+'t='+Date.now(),{cache:'no-store'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    current=await r.text();
-    code.textContent=current;
-    status.textContent='Actualizado '+new Date().toLocaleTimeString();
-    status.className='status ok';
-  }catch(e){
-    code.textContent='No se pudo cargar prueba3.html\n\n'+e;
-    status.textContent='Error al cargar';
-    status.className='status error';
-  }
+function load(){
+  status.textContent='Cargando…';
+  frame.src=TARGET+'?t='+Date.now();
 }
+frame.addEventListener('load',()=>{status.textContent='Cargada '+new Date().toLocaleTimeString();});
 document.getElementById('reload').addEventListener('click',load);
-document.getElementById('copy').addEventListener('click',async()=>{
-  if(!current)return;
-  await navigator.clipboard.writeText(current);
-  const b=document.getElementById('copy'); const old=b.textContent;
-  b.textContent='Copiado ✓'; setTimeout(()=>b.textContent=old,1000);
-});
+document.getElementById('open').addEventListener('click',()=>window.open(TARGET,'_blank'));
 load();
 </script>
 </body>
