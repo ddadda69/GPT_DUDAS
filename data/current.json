@@ -1,7 +1,7 @@
 {
   "$schema": "./schema.json",
   "id": "wintabs-3-mejoras-complejas",
-  "version": 2,
+  "version": 3,
   "title": "Plan de 3 mejoras complejas para WinTabs",
   "sections": [
     {
@@ -29,7 +29,7 @@
         {
           "id": 1,
           "recommended": true,
-          "text": "Añadiría perfiles completos de configuración, por ejemplo:\n\n- **Trabajo**\n- **Personal**\n- **Juego**\n- **Programación**\n\nCada perfil podría guardar independientemente:\n\n- posición de la barra;\n- monitor;\n- tamaño;\n- accesos rápidos;\n- orden de botones;\n- paneles visibles;\n- autoocultación;\n- always-on-top.\n\nComo evolución más avanzada, WinTabs podría cambiar automáticamente de perfil dependiendo de la aplicación activa.\n\nEjemplo:\n\n`Visual Studio Code / Eclipse → perfil Trabajo`\n\n`juego a pantalla completa → perfil Juego`\n\n`escritorio normal → perfil Personal`\n\nEsto requeriría rehacer parte de `SettingsRepository` para separar configuración global y configuración por perfil.\n\n**Dificultad:** alta.  \n**Impacto:** alto y muy visible para el usuario."
+          "text": "Añadiría perfiles completos de configuración, por ejemplo:\n\n- **Trabajo**\n- **Personal**\n- **Juego**\n- **Programación**\n\nCada perfil podría guardar independientemente:\n\n- posición de la barra;\n- monitor;\n- tamaño;\n- accesos rápidos;\n- orden de botones;\n- paneles visibles;\n- autoocultación;\n- always-on-top.\n\nComo evolución más avanzada, WinTabs podría cambiar automáticamente de perfil dependiendo de la aplicación activa.\n\n`Visual Studio Code / Eclipse → perfil Trabajo`\n\n`juego a pantalla completa → perfil Juego`\n\n`escritorio normal → perfil Personal`\n\nEsto requeriría rehacer parte de `SettingsRepository` para separar configuración global y configuración por perfil.\n\n**Dificultad:** alta.  \n**Impacto:** alto y muy visible para el usuario."
         }
       ],
       "allowOther": false,
@@ -45,7 +45,7 @@
         {
           "id": 1,
           "recommended": true,
-          "text": "Implementaría algo parecido a **PowerToys Run**, `Ctrl+P` de VS Code o la command palette de los IDE.\n\nCon un atajo global, por ejemplo:\n\n**Alt + Espacio**\n\naparecería una ventana donde escribir:\n\n- `nota reunión`\n- `alarma 20 minutos`\n- `grabar pantalla`\n- `volumen 30`\n- `abrir proyecto`\n- `preferencias`\n- nombre de cualquier acceso rápido\n\nCada módulo de WinTabs podría registrar sus propios comandos mediante una interfaz común tipo:\n\n```python\nclass CommandProvider:\n    def search(self, query: str) -> list[CommandResult]:\n        ...\n```\n\nDespués añadiría:\n\n- búsqueda fuzzy;\n- ranking por frecuencia de uso;\n- historial;\n- comandos recientes;\n- acciones con teclado;\n- proveedores extensibles.\n\nEsto convertiría WinTabs de una simple barra lateral en una especie de **centro de control rápido de Windows**.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto."
+          "text": "Implementaría algo parecido a **PowerToys Run**, `Ctrl+P` de VS Code o la command palette de los IDE.\n\nCon un atajo global, por ejemplo **Alt + Espacio**, aparecería una ventana donde escribir:\n\n- `nota reunión`\n- `alarma 20 minutos`\n- `grabar pantalla`\n- `volumen 30`\n- `abrir proyecto`\n- `preferencias`\n- nombre de cualquier acceso rápido\n\nCada módulo de WinTabs podría registrar sus propios comandos mediante una interfaz común tipo:\n\n```python\nclass CommandProvider:\n    def search(self, query: str) -> list[CommandResult]:\n        ...\n```\n\nDespués añadiría:\n\n- búsqueda fuzzy;\n- ranking por frecuencia de uso;\n- historial;\n- comandos recientes;\n- acciones con teclado;\n- proveedores extensibles.\n\nEsto convertiría WinTabs de una simple barra lateral en una especie de **centro de control rápido de Windows**.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto."
         }
       ],
       "allowOther": false,
