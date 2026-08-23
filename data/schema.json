@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
+  "title": "GPT_DUDAS Decision Plan",
+  "description": "Contrato formal para data/current.json y data/example.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "title", "sections"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/singleSection" },
+          { "$ref": "#/$defs/multipleSection" },
+          { "$ref": "#/$defs/textSection" },
+          { "$ref": "#/$defs/booleanSection" }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "optionId": {
+      "oneOf": [
+        { "type": "integer" },
+        { "type": "string", "minLength": 1 }
+      ]
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/optionId"
+        },
+        "text": {
+          "type": "string"
+        },
+        "recommended": {
+          "type": "boolean"
+        },
+        "selected": {
+          "type": "boolean"
+        }
+      }
+    },
+    "sectionBase": {
+      "type": "object",
+      "required": ["id", "title", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "type": {
+          "enum": ["single", "multiple", "text", "boolean"]
+        },
+        "allowNote": {
+          "type": "boolean"
+        },
+        "noteLabel": {
+          "type": "string"
+        },
+        "notePlaceholder": {
+          "type": "string"
+        }
+      }
+    },
+    "singleSection": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "type": "object",
+          "required": ["options"],
+          "properties": {
+            "type": {
+              "const": "single"
+            },
+            "options": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/option"
+              }
+            },
+            "defaultOption": {
+              "$ref": "#/$defs/optionId"
+            },
+            "allowOther": {
+              "type": "boolean"
+            },
+            "defaultOther": {
+              "type": "boolean"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "multipleSection": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "type": "object",
+          "required": ["options"],
+          "properties": {
+            "type": {
+              "const": "multiple"
+            },
+            "options": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/option"
+              }
+            },
+            "defaultOptions": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/optionId"
+              }
+            },
+            "allowOther": {
+              "type": "boolean"
+            },
+            "defaultOther": {
+              "type": "boolean"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "textSection": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "text"
+            },
+            "rows": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "placeholder": {
+              "type": "string"
+            },
+            "defaultValue": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "booleanSection": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "boolean"
+            },
+            "default": {
+              "type": "boolean"
+            },
+            "trueLabel": {
+              "type": "string"
+            },
+            "falseLabel": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}
