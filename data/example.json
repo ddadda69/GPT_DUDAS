@@ -1,72 +1,44 @@
 {
   "$schema": "./schema.json",
-  "id": "plantilla-generica",
-  "version": 1,
-  "title": "Plantilla genérica de decisiones",
-  "description": "Ejemplo de todos los tipos básicos admitidos por el visualizador. Sirve como referencia para construir futuros data/current.json.",
+  "id": "plantilla-plan-chatgpt",
+  "version": 2,
+  "title": "Plan de ejemplo con estilo de respuesta normal",
+  "description": "La idea es que el contenido principal del visor sea el mismo que ChatGPT habría escrito en el chat, pero con controles para decidir, editar y añadir notas.",
   "sections": [
     {
-      "id": "decision-unica",
-      "title": "1. Decisión de una sola opción",
-      "description": "Usa type=single cuando solo deba elegirse una alternativa.",
+      "id": "mejora-sin-alternativas",
+      "title": "1. Mejora sin alternativas reales",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Primera alternativa. Puede contener una explicación extensa con ventajas, inconvenientes y consecuencias de elegirla."
-        },
-        {
-          "id": 2,
-          "text": "Segunda alternativa. No existe límite práctico de opciones; se añaden tantas como sean necesarias para la decisión."
+          "text": "Explica aquí la mejora **completa**, igual que en una respuesta normal.\n\n- Puede contener listas.\n- Puede usar `código inline`.\n- Puede incluir explicaciones largas.\n\n```python\ndef ejemplo():\n    return \"También admite bloques de código\"\n```\n\n**Dificultad:** alta.  \n**Impacto:** alto."
         }
       ],
-      "allowOther": true,
+      "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Añade un matiz sobre la opción elegida…"
+      "notePlaceholder": "Añade un matiz para este punto…"
     },
     {
-      "id": "decision-multiple",
-      "title": "2. Selección de varias opciones",
-      "description": "Usa type=multiple cuando varias respuestas puedan combinarse.",
-      "type": "multiple",
-      "defaultOptions": [1],
+      "id": "mejora-con-decision-real",
+      "title": "2. Mejora con dos alternativas reales",
+      "description": "Solo añade varias opciones cuando de verdad cambiarían la implementación.",
+      "type": "single",
+      "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Primera prioridad seleccionable."
+          "text": "**Opción recomendada.** Explica la solución completa, sus ventajas y las consecuencias de elegirla."
         },
         {
           "id": 2,
-          "text": "Segunda prioridad seleccionable."
-        },
-        {
-          "id": 3,
-          "text": "Tercera prioridad seleccionable."
+          "text": "**Alternativa real.** Inclúyela únicamente si es razonable y cambia de forma relevante la implementación."
         }
       ],
-      "allowOther": true,
-      "allowNote": true
-    },
-    {
-      "id": "texto-libre",
-      "title": "3. Respuesta abierta",
-      "description": "Usa type=text cuando la respuesta no deba limitarse a alternativas predefinidas.",
-      "type": "text",
-      "rows": 4,
-      "placeholder": "Escribe la respuesta completa…",
-      "allowNote": false
-    },
-    {
-      "id": "decision-binaria",
-      "title": "4. Decisión binaria",
-      "description": "Usa type=boolean para una decisión sí/no o equivalente.",
-      "type": "boolean",
-      "default": true,
-      "trueLabel": "Sí",
-      "falseLabel": "No",
+      "allowOther": false,
       "allowNote": true
     }
   ]
