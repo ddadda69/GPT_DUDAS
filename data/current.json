@@ -1,56 +1,68 @@
 {
   "$schema": "./schema.json",
-  "id": "wintabs-3-mejoras-complejas",
-  "version": 3,
-  "title": "Plan de 3 mejoras complejas para WinTabs",
+  "id": "wintabs-3-mejoras-ui",
+  "version": 1,
+  "title": "Plan de 3 mejoras de UI para WinTabs",
   "sections": [
     {
-      "id": "refactor-main-window",
-      "title": "1. Refactor profundo de `MainWindow`",
+      "id": "barra-visual",
+      "title": "1. Rediseño visual de la barra principal",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Ahora mismo `MainWindow` concentra demasiadas responsabilidades: gestión de la barra, paneles, posicionamiento, accesos rápidos, autoocultación, persistencia y acciones.\n\nLo dividiría en varios componentes:\n\n- `BarController`: estado y comportamiento de la barra.\n- `PanelManager`: apertura, cierre, fijado y geometría de paneles.\n- `GeometryManager`: monitores, DPI, bordes y reposicionamiento.\n- `LauncherRegistry`: paneles, accesos y acciones disponibles.\n- `ActionRegistry`: volumen, pin, preferencias y futuras acciones.\n\nEl objetivo sería que añadir un nuevo módulo a WinTabs no requiriese seguir modificando una clase central enorme.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto, sobre todo a medio plazo."
+          "text": "Mantendría la barra compacta actual, pero la haría visualmente más clara y moderna.\n\nAñadiría:\n\n- estados `hover`, pulsado y activo mucho más visibles;\n- fondo ligeramente translúcido con separación clara entre grupos;\n- tooltips homogéneos y más limpios;\n- pequeñas animaciones de entrada/salida y cambio de estado;\n- indicador discreto para el panel actualmente abierto;\n- espaciado y tamaños coherentes entre accesos, paneles y controles de audio.\n\nLa idea es mejorar bastante la percepción de calidad sin cambiar la forma de usar WinTabs ni aumentar mucho el tamaño de la barra.\n\n**Dificultad:** media.  \n**Impacto:** alto y visible constantemente."
+        },
+        {
+          "id": 2,
+          "text": "Cambiaría la barra a un diseño más parecido a un **dock flotante**, con botones independientes visualmente separados y una superficie semitransparente con esquinas redondeadas.\n\nLos iconos podrían aumentar ligeramente al pasar el ratón y los grupos —paneles, accesos y sistema— tendrían separadores o bloques propios. La barra dejaría de parecer una colección de tabs tradicionales y se acercaría más a una interfaz tipo macOS Dock / PowerToys.\n\nVisualmente sería un cambio bastante mayor y más atractivo, pero obligaría a rehacer parte del pintado, hit-testing, geometría de la media-tab y comportamiento en los cuatro bordes.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto, pero cambia bastante la identidad actual."
         }
       ],
       "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Añade un matiz o cambio para este punto…"
+      "notePlaceholder": "Añade un matiz sobre el estilo de la barra…"
     },
     {
-      "id": "perfiles-contextuales",
-      "title": "2. Perfiles de WinTabs según contexto",
+      "id": "paneles-ui",
+      "title": "2. Unificar y modernizar la UI de los paneles",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Añadiría perfiles completos de configuración, por ejemplo:\n\n- **Trabajo**\n- **Personal**\n- **Juego**\n- **Programación**\n\nCada perfil podría guardar independientemente:\n\n- posición de la barra;\n- monitor;\n- tamaño;\n- accesos rápidos;\n- orden de botones;\n- paneles visibles;\n- autoocultación;\n- always-on-top.\n\nComo evolución más avanzada, WinTabs podría cambiar automáticamente de perfil dependiendo de la aplicación activa.\n\n`Visual Studio Code / Eclipse → perfil Trabajo`\n\n`juego a pantalla completa → perfil Juego`\n\n`escritorio normal → perfil Personal`\n\nEsto requeriría rehacer parte de `SettingsRepository` para separar configuración global y configuración por perfil.\n\n**Dificultad:** alta.  \n**Impacto:** alto y muy visible para el usuario."
+          "text": "Crearía una **cabecera común para todos los paneles** —Notas, Alarmas y Grabaciones— con el mismo lenguaje visual y los controles importantes siempre en el mismo sitio.\n\nLa cabecera incluiría:\n\n- título e icono del módulo;\n- fijar/desfijar;\n- siempre encima;\n- cerrar;\n- acciones propias del módulo en una zona secundaria.\n\nTambién normalizaría márgenes, botones, estados vacíos, campos y jerarquía tipográfica para que los tres paneles parezcan partes de una misma aplicación y no interfaces independientes.\n\n**Dificultad:** media-alta.  \n**Impacto:** alto en consistencia y facilidad de uso."
+        },
+        {
+          "id": 2,
+          "text": "Iría a una interfaz de panel más ambiciosa con **sidebar interna y vistas**, de modo que cada panel pueda crecer sin llenar la pantalla de controles.\n\nPor ejemplo, Alarmas podría separar `Activas`, `Programadas` e `Historial`; Notas podría tener una lista lateral de notas y una zona de edición; Grabaciones podría separar `Nueva grabación` y `Biblioteca`.\n\nEsto daría mucho más margen para evolucionar cada módulo y mejoraría la navegación cuando haya bastante contenido, pero supone rehacer más profundamente cada `TabWidget`.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto si WinTabs va a seguir creciendo."
         }
       ],
       "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Añade un matiz o cambio para este punto…"
+      "notePlaceholder": "Indica cómo quieres organizar los paneles…"
     },
     {
-      "id": "paleta-comandos",
-      "title": "3. Paleta global de comandos",
+      "id": "preferencias-ui",
+      "title": "3. Rediseño de Preferencias con vista previa real",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Implementaría algo parecido a **PowerToys Run**, `Ctrl+P` de VS Code o la command palette de los IDE.\n\nCon un atajo global, por ejemplo **Alt + Espacio**, aparecería una ventana donde escribir:\n\n- `nota reunión`\n- `alarma 20 minutos`\n- `grabar pantalla`\n- `volumen 30`\n- `abrir proyecto`\n- `preferencias`\n- nombre de cualquier acceso rápido\n\nCada módulo de WinTabs podría registrar sus propios comandos mediante una interfaz común tipo:\n\n```python\nclass CommandProvider:\n    def search(self, query: str) -> list[CommandResult]:\n        ...\n```\n\nDespués añadiría:\n\n- búsqueda fuzzy;\n- ranking por frecuencia de uso;\n- historial;\n- comandos recientes;\n- acciones con teclado;\n- proveedores extensibles.\n\nEsto convertiría WinTabs de una simple barra lateral en una especie de **centro de control rápido de Windows**.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto."
+          "text": "Reorganizaría **Preferencias** en una navegación lateral por categorías en lugar de concentrar tantos controles en una ventana tradicional.\n\nTendría secciones como:\n\n- `Barra`;\n- `Accesos`;\n- `Paneles`;\n- `Apariencia`;\n- `Alarmas y correo`;\n- `Avanzado`.\n\nA la derecha se mostraría únicamente la sección seleccionada, con controles más espaciados y descripciones breves. Mantendría la previsualización en tiempo real que ya existe, pero haría mucho más fácil encontrar cada ajuste.\n\n**Dificultad:** media.  \n**Impacto:** alto, especialmente cuando se añadan más opciones."
+        },
+        {
+          "id": 2,
+          "text": "Convertiría Preferencias en un **editor visual de WinTabs**. La parte izquierda mostraría una representación interactiva de la barra y los paneles, y la derecha las propiedades del elemento seleccionado.\n\nSe podría pulsar un tab de la maqueta para cambiar tamaño, visibilidad, orden o comportamiento, y arrastrar elementos directamente para reorganizarlos. Los cambios se verían simultáneamente en la barra real.\n\nSería una experiencia mucho más intuitiva y diferenciadora, pero exige construir una capa de preview bastante más compleja que el formulario actual.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto en experiencia de configuración."
         }
       ],
       "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Añade un matiz o cambio para este punto…"
+      "notePlaceholder": "Añade preferencias sobre cómo debería configurarse WinTabs…"
     }
   ]
 }
