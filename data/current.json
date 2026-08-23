@@ -1,72 +1,56 @@
 {
   "$schema": "./schema.json",
   "id": "wintabs-3-mejoras-complejas",
-  "version": 1,
-  "title": "WinTabs — plan de 3 mejoras complejas",
-  "description": "Plan basado en el estado actual del repositorio. Las tres mejoras buscan que WinTabs pueda crecer sin seguir aumentando el acoplamiento de MainWindow y, al mismo tiempo, añadir capacidades de escritorio realmente nuevas.",
+  "version": 2,
+  "title": "Plan de 3 mejoras complejas para WinTabs",
   "sections": [
     {
-      "id": "arquitectura-modular",
-      "title": "1. Arquitectura modular y sistema de módulos",
-      "description": "Separar MainWindow en piezas especializadas: BarController para la barra, PanelManager para ciclo de vida y visibilidad de paneles, GeometryManager para pantallas/DPI/posicionamiento, ActionRegistry para acciones y LauncherRegistry para elementos de la barra. Notas, Alarmas y Grabaciones pasarían a registrarse como módulos con metadatos, icono, widget y acciones, evitando tener que modificar MainWindow cada vez que se añade una función. También se aislaría la persistencia del estado de UI para poder probar la lógica sin levantar toda la interfaz.",
+      "id": "refactor-main-window",
+      "title": "1. Refactor profundo de `MainWindow`",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Migración incremental: extraer primero geometría, gestión de paneles y registro de acciones, manteniendo los widgets y comportamiento actuales. Después convertir Notas, Alarmas y Grabaciones al nuevo registro de módulos. Reduce mucho el riesgo de regresiones y permite comprobar cada fase con los tests existentes."
-        },
-        {
-          "id": 2,
-          "text": "Reestructuración completa de una vez alrededor de un sistema de plugins/módulos declarativos. El resultado final sería más limpio desde el primer momento, pero el cambio tocaría simultáneamente MainWindow, preferencias, configuración, paneles y construcción de tabs, aumentando bastante el riesgo de romper comportamientos actuales."
+          "text": "Ahora mismo `MainWindow` concentra demasiadas responsabilidades: gestión de la barra, paneles, posicionamiento, accesos rápidos, autoocultación, persistencia y acciones.\n\nLo dividiría en varios componentes:\n\n- `BarController`: estado y comportamiento de la barra.\n- `PanelManager`: apertura, cierre, fijado y geometría de paneles.\n- `GeometryManager`: monitores, DPI, bordes y reposicionamiento.\n- `LauncherRegistry`: paneles, accesos y acciones disponibles.\n- `ActionRegistry`: volumen, pin, preferencias y futuras acciones.\n\nEl objetivo sería que añadir un nuevo módulo a WinTabs no requiriese seguir modificando una clase central enorme.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto, sobre todo a medio plazo."
         }
       ],
-      "allowOther": true,
+      "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Matices sobre cómo quieres abordar el refactor…"
+      "notePlaceholder": "Añade un matiz o cambio para este punto…"
     },
     {
       "id": "perfiles-contextuales",
-      "title": "2. Perfiles de escritorio contextuales y multi-monitor",
-      "description": "Crear un motor de perfiles para que WinTabs tenga configuraciones distintas según contexto. Cada perfil podría definir monitor, borde, tamaño, autoocultación, paneles visibles, accesos, orden y estado always-on-top. Ejemplos: Trabajo con IDE y carpetas de proyecto, Juego con barra mínima, y Personal con notas/grabaciones. El cambio exigiría versionar SettingsRepository, separar configuración global de configuración por perfil y añadir un ProfileManager capaz de aplicar un perfil sin reiniciar la aplicación.",
+      "title": "2. Perfiles de WinTabs según contexto",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Perfiles con reglas automáticas: además del cambio manual, permitir activar perfiles según proceso en primer plano y monitor activo, con prioridad de reglas y perfil fallback. Es la opción más potente y encaja con el modo juego existente sin basarlo en listas rígidas de juegos."
-        },
-        {
-          "id": 2,
-          "text": "Una barra independiente por monitor, cada una con su propia configuración y paneles, pero sin reglas automáticas de contexto. Es mejor si el objetivo principal es trabajar simultáneamente con varias pantallas, aunque añade más ventanas Qt y complica sincronización, bandeja y gestión de paneles."
+          "text": "Añadiría perfiles completos de configuración, por ejemplo:\n\n- **Trabajo**\n- **Personal**\n- **Juego**\n- **Programación**\n\nCada perfil podría guardar independientemente:\n\n- posición de la barra;\n- monitor;\n- tamaño;\n- accesos rápidos;\n- orden de botones;\n- paneles visibles;\n- autoocultación;\n- always-on-top.\n\nComo evolución más avanzada, WinTabs podría cambiar automáticamente de perfil dependiendo de la aplicación activa.\n\nEjemplo:\n\n`Visual Studio Code / Eclipse → perfil Trabajo`\n\n`juego a pantalla completa → perfil Juego`\n\n`escritorio normal → perfil Personal`\n\nEsto requeriría rehacer parte de `SettingsRepository` para separar configuración global y configuración por perfil.\n\n**Dificultad:** alta.  \n**Impacto:** alto y muy visible para el usuario."
         }
       ],
-      "allowOther": true,
+      "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Indica perfiles, monitores o reglas que te interesen especialmente…"
+      "notePlaceholder": "Añade un matiz o cambio para este punto…"
     },
     {
-      "id": "command-palette",
-      "title": "3. Paleta global de comandos y búsqueda unificada",
-      "description": "Añadir una paleta invocable mediante atajo global que convierta WinTabs en un lanzador de acciones, no solo de tabs. Desde una sola caja se podrían buscar y abrir accesos, cambiar de nota, crear una nota rápida, localizar alarmas, iniciar una grabación, modificar volumen, abrir preferencias o ejecutar acciones futuras de nuevos módulos. Internamente se implementaría mediante proveedores de comandos registrados por cada módulo, búsqueda fuzzy, ranking por uso y un historial local de acciones recientes.",
+      "id": "paleta-comandos",
+      "title": "3. Paleta global de comandos",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Índice interno extensible mediante CommandProvider. Cada módulo aporta comandos y resultados; WinTabs controla el ranking, historial y búsqueda fuzzy. No introduce dependencias externas y la arquitectura queda preparada para que cualquier módulo futuro publique sus propias acciones."
-        },
-        {
-          "id": 2,
-          "text": "Paleta híbrida con proveedores internos más integración opcional con Everything para buscar cualquier fichero del PC casi instantáneamente. Sería más potente como launcher general de Windows, pero añade una dependencia externa y obliga a gestionar disponibilidad, configuración y fallback."
+          "text": "Implementaría algo parecido a **PowerToys Run**, `Ctrl+P` de VS Code o la command palette de los IDE.\n\nCon un atajo global, por ejemplo:\n\n**Alt + Espacio**\n\naparecería una ventana donde escribir:\n\n- `nota reunión`\n- `alarma 20 minutos`\n- `grabar pantalla`\n- `volumen 30`\n- `abrir proyecto`\n- `preferencias`\n- nombre de cualquier acceso rápido\n\nCada módulo de WinTabs podría registrar sus propios comandos mediante una interfaz común tipo:\n\n```python\nclass CommandProvider:\n    def search(self, query: str) -> list[CommandResult]:\n        ...\n```\n\nDespués añadiría:\n\n- búsqueda fuzzy;\n- ranking por frecuencia de uso;\n- historial;\n- comandos recientes;\n- acciones con teclado;\n- proveedores extensibles.\n\nEsto convertiría WinTabs de una simple barra lateral en una especie de **centro de control rápido de Windows**.\n\n**Dificultad:** alta.  \n**Impacto:** muy alto."
         }
       ],
-      "allowOther": true,
+      "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Añade acciones o tipos de búsqueda que quieras incluir…"
+      "notePlaceholder": "Añade un matiz o cambio para este punto…"
     }
   ]
 }
