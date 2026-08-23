@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Decision Viewer</title>
+  <link rel="stylesheet" href="app/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Decision Viewer</div>
+    <div id="status" class="status">Cargando…</div>
+    <button id="reload" class="btn" type="button">Recargar</button>
+    <a id="openJson" class="btn link-btn" href="https://github.com/ddadda69/GPT_DUDAS/blob/main/data/current.json" target="_blank" rel="noopener">Ver JSON</a>
+  </header>
+
+  <main id="app" class="app">
+    <section class="loading-card">Cargando el plan actual…</section>
+  </main>
+
+  <script type="module" src="app/viewer.js"></script>
+</body>
+</html>
