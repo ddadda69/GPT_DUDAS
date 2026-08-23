@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plan WinTabs - Prueba 3</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f5f7;font-family:Inter,"Segoe UI",Arial,sans-serif;color:#202124}main{width:100%;padding:4px}h1{font-size:22px;margin:2px 2px 4px}.subtitle{font-size:13px;color:#666;margin:0 2px 5px}.card{width:100%;background:#fff;border:1px solid #d9dce1;border-radius:8px;padding:6px;margin:0 0 5px}.card h2{font-size:17px;margin:0 0 3px}.desc{font-size:13px;color:#555;line-height:1.35;margin:0 0 4px}.option{display:grid;grid-template-columns:20px 28px minmax(0,1fr) auto;gap:4px;align-items:start;padding:4px 3px;border-radius:5px}.option:hover{background:#f6f7f9}.option input[type=radio]{margin:3px 0 0}.num{font-weight:700;color:#666}.text{font-size:13px;line-height:1.3}.recommended,.modified{display:inline-block;font-size:10px;padding:1px 5px;border-radius:9px;margin-left:5px;vertical-align:1px}.recommended{background:#e8f1ff;color:#245ea8}.modified{background:#fff3cd;color:#775b00}.edit-btn{border:1px solid #cfd2d6;background:#fff;border-radius:5px;padding:3px 6px;font-size:11px;cursor:pointer;white-space:nowrap}.edit-btn:hover{background:#f1f2f4}.editor{display:none;grid-column:3/5;margin-top:3px}.editor textarea{width:100%;min-height:48px;resize:vertical;border:1px solid #cfd2d6;border-radius:5px;padding:5px;font:inherit;font-size:12px}.editor-actions{display:flex;gap:4px;margin-top:3px}.editor-actions button{border:0;border-radius:4px;padding:4px 7px;font-size:11px;cursor:pointer}.save-edit{background:#202124;color:#fff}.cancel-edit{background:#eceef1}.other-input{display:none;width:100%;margin-top:3px;border:1px solid #cfd2d6;border-radius:5px;padding:5px;font:inherit;font-size:12px}.note-label{display:block;font-size:12px;font-weight:600;margin:4px 0 2px}.note{width:100%;min-height:42px;resize:vertical;border:1px solid #cfd2d6;border-radius:5px;padding:5px;font:inherit;font-size:12px}.actions{position:sticky;bottom:0;padding:4px 0;background:rgba(244,245,247,.94);backdrop-filter:blur(6px)}#confirm{width:100%;border:0;border-radius:6px;padding:8px;background:#202124;color:#fff;font-weight:700;cursor:pointer}.result{display:none;background:#fff;border:1px solid #d9dce1;border-radius:8px;padding:6px;margin-top:5px}.result pre{white-space:pre-wrap;margin:4px 0;font-size:12px}.copy{width:100%;border:0;border-radius:5px;padding:7px;background:#eceef1;cursor:pointer;font-weight:600}@media(max-width:640px){.option{grid-template-columns:20px 24px minmax(0,1fr)}.edit-btn{grid-column:3;justify-self:start}.editor{grid-column:3}.card h2{font-size:16px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Plan de mejoras de WinTabs</h1>
+<div class="subtitle">Selecciona una opción. Al copiar se incluye solo el número; si editas una respuesta, se marca como modificada y se copia también su texto.</div>
+
+<section class="card" data-id="1">
+<h2>1. Portapapeles inteligente</h2>
+<p class="desc">Añadir un historial útil para recuperar textos, imágenes y rutas usadas recientemente.</p>
+<label class="option"><input type="radio" name="m1" value="1" checked><span class="num">1.</span><span class="text" data-original="Historial de portapapeles con búsqueda, favoritos y filtros por tipo.">Historial de portapapeles con búsqueda, favoritos y filtros por tipo.<span class="recommended">Recomendada</span></span><button type="button" class="edit-btn">Editar</button><div class="editor"><textarea></textarea><div class="editor-actions"><button type="button" class="save-edit">Guardar</button><button type="button" class="cancel-edit">Cancelar</button></div></div></label>
+<label class="option"><input type="radio" name="m1" value="2"><span class="num">2.</span><span class="text" data-original="Solo historial de texto, ligero y rápido, sin imágenes.">Solo historial de texto, ligero y rápido, sin imágenes.</span><button type="button" class="edit-btn">Editar</button><div class="editor"><textarea></textarea><div class="editor-actions"><button type="button" class="save-edit">Guardar</button><button type="button" class="cancel-edit">Cancelar</button></div></div></label>
+<label class="option"><input type="radio" name="m1" value="otra"><span class="num">3.</span><span class="text">Otra<input class="other-input" placeholder="Escribe tu alternativa completa"></span></label>
+<label class="note-label">Nota</label><textarea class="note" placeholder="Matiz opcional..."></textarea>
+</section>
+
+<section class="card" data-id="2">
+<h2>2. Panel de estado del PC</h2>
+<p class="desc">Mostrar información útil del sistema directamente desde WinTabs sin abrir otras aplicaciones.</p>
+<label class="option"><input type="radio" name="m2" value="1" checked><span class="num">1.</span><span class="text" data-original="Panel compacto con CPU, RAM, GPU, temperaturas y red.">Panel compacto con CPU, RAM, GPU, temperaturas y red.<span class="recommended">Recomendada</span></span><button type="button" class="edit-btn">Editar</button><div class="editor"><textarea></textarea><div class="editor-actions"><button type="button" class="save-edit">Guardar</button><button type="button" class="cancel-edit">Cancelar</button></div></div></label>
+<label class="option"><input type="radio" name="m2" value="2"><span class="num">2.</span><span class="text" data-original="Solo indicadores mínimos en la propia barra, sin panel adicional.">Solo indicadores mínimos en la propia barra, sin panel adicional.</span><button type="button" class="edit-btn">Editar</button><div class="editor"><textarea></textarea><div class="editor-actions"><button type="button" class="save-edit">Guardar</button><button type="button" class="cancel-edit">Cancelar</button></div></div></label>
+<label class="option"><input type="radio" name="m2" value="otra"><span class="num">3.</span><span class="text">Otra<input class="other-input" placeholder="Escribe tu alternativa completa"></span></label>
+<label class="note-label">Nota</label><textarea class="note" placeholder="Matiz opcional..."></textarea>
+</section>
+
+<section class="card" data-id="3">
+<h2>3. Perfiles de WinTabs</h2>
+<p class="desc">Cambiar rápidamente qué accesos, paneles y comportamiento están activos según el contexto.</p>
+<label class="option"><input type="radio" name="m3" value="1" checked><span class="num">1.</span><span class="text" data-original="Perfiles Trabajo, Personal y Juegos con cambio manual y configuración independiente.">Perfiles Trabajo, Personal y Juegos con cambio manual y configuración independiente.<span class="recommended">Recomendada</span></span><button type="button" class="edit-btn">Editar</button><div class="editor"><textarea></textarea><div class="editor-actions"><button type="button" class="save-edit">Guardar</button><button type="button" class="cancel-edit">Cancelar</button></div></div></label>
+<label class="option"><input type="radio" name="m3" value="2"><span class="num">2.</span><span class="text" data-original="Perfiles automáticos según aplicación activa o estado de pantalla completa.">Perfiles automáticos según aplicación activa o estado de pantalla completa.</span><button type="button" class="edit-btn">Editar</button><div class="editor"><textarea></textarea><div class="editor-actions"><button type="button" class="save-edit">Guardar</button><button type="button" class="cancel-edit">Cancelar</button></div></div></label>
+<label class="option"><input type="radio" name="m3" value="otra"><span class="num">3.</span><span class="text">Otra<input class="other-input" placeholder="Escribe tu alternativa completa"></span></label>
+<label class="note-label">Nota</label><textarea class="note" placeholder="Matiz opcional..."></textarea>
+</section>
+
+<div class="actions"><button id="confirm">Confirmar decisiones</button></div>
+<div class="result" id="result"><strong>Decisiones seleccionadas</strong><pre id="resultText"></pre><button class="copy" id="copy">Copiar resultado</button></div>
+</main>
+<script>
+const cards=[...document.querySelectorAll('.card')];
+function updateOther(card){const selected=card.querySelector('input[type=radio]:checked');const input=card.querySelector('.other-input');input.style.display=selected&&selected.value==='otra'?'block':'none';if(input.style.display==='block')input.focus();}
+cards.forEach(card=>{card.querySelectorAll('input[type=radio]').forEach(r=>r.addEventListener('change',()=>updateOther(card)));card.querySelectorAll('.option').forEach(option=>{const edit=option.querySelector('.edit-btn');if(!edit)return;const textEl=option.querySelector('.text');const editor=option.querySelector('.editor');const area=editor.querySelector('textarea');const save=editor.querySelector('.save-edit');const cancel=editor.querySelector('.cancel-edit');edit.addEventListener('click',e=>{e.preventDefault();const radio=option.querySelector('input[type=radio]');radio.checked=true;updateOther(card);area.value=textEl.dataset.custom||textEl.dataset.original||textEl.childNodes[0].textContent.trim();editor.style.display='block';area.focus();});save.addEventListener('click',e=>{e.preventDefault();const value=area.value.trim();if(!value)return;textEl.dataset.custom=value;textEl.textContent=value;const badge=document.createElement('span');badge.className='modified';badge.textContent='Modificada';textEl.appendChild(badge);editor.style.display='none';});cancel.addEventListener('click',e=>{e.preventDefault();editor.style.display='none';});});});
+function buildOutput(){let out='';cards.forEach(card=>{const title=card.querySelector('h2').textContent.trim();const selected=card.querySelector('input[type=radio]:checked');const option=selected.closest('.option');const note=card.querySelector('.note').value.trim();out+=title+'\n';if(selected.value==='otra'){const custom=card.querySelector('.other-input').value.trim();out+='Respuesta: Otra'+(custom?' - '+custom:'')+'\n';}else{const textEl=option.querySelector('.text');const modified=textEl&&textEl.dataset.custom;if(modified){out+='Respuesta: '+selected.value+' (modificada) - '+modified+'\n';}else{out+='Respuesta: '+selected.value+'\n';}}if(note)out+='Nota: '+note+'\n';out+='\n';});return out.trim();}
+document.getElementById('confirm').addEventListener('click',()=>{document.getElementById('resultText').textContent=buildOutput();document.getElementById('result').style.display='block';document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});});
+document.getElementById('copy').addEventListener('click',async()=>{const text=buildOutput();document.getElementById('resultText').textContent=text;try{await navigator.clipboard.writeText(text);}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}const b=document.getElementById('copy');const old=b.textContent;b.textContent='Copiado ✓';setTimeout(()=>b.textContent=old,1000);});
+</script>
+</body>
+</html>
