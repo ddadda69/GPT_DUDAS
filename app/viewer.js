@@ -8,10 +8,7 @@ let currentPlan = null;
 let currentSha = '';
 
 if (window.marked) {
-  window.marked.setOptions({
-    gfm: true,
-    breaks: false
-  });
+  window.marked.setOptions({ gfm: true, breaks: false });
 }
 
 function decodeBase64Utf8(base64) {
@@ -28,26 +25,19 @@ function el(tag, className, text) {
 }
 
 function sanitizeHtml(html) {
-  if (window.DOMPurify) return window.DOMPurify.sanitize(html);
-  return html;
+  return window.DOMPurify ? window.DOMPurify.sanitize(html) : html;
 }
 
 function renderMarkdown(target, markdown) {
   const source = String(markdown || '');
-  if (window.marked) {
-    target.innerHTML = sanitizeHtml(window.marked.parse(source));
-  } else {
-    target.textContent = source;
-  }
+  if (window.marked) target.innerHTML = sanitizeHtml(window.marked.parse(source));
+  else target.textContent = source;
 }
 
 function renderMarkdownInline(target, markdown) {
   const source = String(markdown || '');
-  if (window.marked && window.marked.parseInline) {
-    target.innerHTML = sanitizeHtml(window.marked.parseInline(source));
-  } else {
-    target.textContent = source;
-  }
+  if (window.marked?.parseInline) target.innerHTML = sanitizeHtml(window.marked.parseInline(source));
+  else target.textContent = source;
 }
 
 function optionBadge(text, className) {
@@ -56,19 +46,14 @@ function optionBadge(text, className) {
 
 function setOptionText(textEl, text, recommended, modified, showRecommended) {
   textEl.textContent = '';
-
   const body = el('div', 'markdown-body');
   renderMarkdown(body, text);
   textEl.appendChild(body);
 
   if ((recommended && showRecommended) || modified) {
     const badges = el('div', 'option-badges');
-    if (recommended && showRecommended) {
-      badges.appendChild(optionBadge('Recomendada', 'recommended'));
-    }
-    if (modified) {
-      badges.appendChild(optionBadge('Editada', 'modified'));
-    }
+    if (recommended && showRecommended) badges.appendChild(optionBadge('Recomendada', 'recommended'));
+    if (modified) badges.appendChild(optionBadge('Editada', 'modified'));
     textEl.appendChild(badges);
   }
 }
@@ -84,16 +69,13 @@ function createEditableOption(section, sectionIndex, option, inputType, checked,
   const input = document.createElement('input');
   input.type = inputType;
   input.className = 'choice';
-  input.name = inputType === 'radio'
-    ? `q-${sectionIndex}`
-    : `q-${sectionIndex}-${option.id}`;
+  input.name = inputType === 'radio' ? `q-${sectionIndex}` : `q-${sectionIndex}-${option.id}`;
   input.value = String(option.id);
   input.id = radioId(sectionIndex, option.id);
   input.checked = Boolean(checked);
   input.setAttribute('aria-label', optionCount > 1 ? `Opción ${option.id}` : 'Implementar');
 
   const content = el('div', 'option-content');
-
   if (optionCount > 1) {
     const kicker = el('label', 'option-kicker', `Opción ${option.id}`);
     kicker.htmlFor = input.id;
@@ -102,77 +84,84 @@ function createEditableOption(section, sectionIndex, option, inputType, checked,
 
   const textEl = el('div', 'option-text');
   textEl.dataset.original = option.text || '';
-  setOptionText(
-    textEl,
-    option.text || '',
-    Boolean(option.recommended),
-    false,
-    optionCount > 1
-  );
+  setOptionText(textEl, option.text || '', Boolean(option.recommended), false, optionCount > 1);
   content.appendChild(textEl);
 
   const editBtn = el('button', 'edit-btn', 'Editar');
   editBtn.type = 'button';
+  editBtn.setAttribute('aria-expanded', 'false');
 
-  const editor = el('div', 'option-editor');
-  const editArea = document.createElement('textarea');
-  editArea.rows = 10;
-  editArea.spellcheck = true;
-  editArea.placeholder = 'Edita el contenido en Markdown…';
-
-  const editorHelp = el(
-    'div',
-    'editor-help',
-    'Admite Markdown: listas, **negrita**, `código` y bloques ```.'
-  );
-
-  const editorActions = el('div', 'editor-actions');
-  const saveBtn = el('button', 'save-edit', 'Guardar');
-  saveBtn.type = 'button';
-  const cancelBtn = el('button', 'cancel-edit', 'Cancelar');
-  cancelBtn.type = 'button';
-  editorActions.append(saveBtn, cancelBtn);
-  editor.append(editArea, editorHelp, editorActions);
+  let editing = false;
+  let editArea = null;
+  let actions = null;
 
   const selectOption = () => {
     input.checked = true;
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
-  textEl.addEventListener('click', event => {
-    if (event.target.closest('a, button')) return;
-    selectOption();
-  });
+  const currentValue = () => textEl.dataset.custom || textEl.dataset.original || '';
+
+  const finishEdit = (save) => {
+    if (!editing) return;
+    const previous = currentValue();
+    const value = editArea.value;
+
+    if (save && value.trim()) {
+      textEl.dataset.custom = value;
+    }
+
+    const rendered = save && value.trim() ? value : previous;
+    const modified = Boolean(textEl.dataset.custom);
+    setOptionText(textEl, rendered, Boolean(option.recommended), modified, optionCount > 1);
+
+    actions?.remove();
+    actions = null;
+    editArea = null;
+    editing = false;
+    editBtn.disabled = false;
+    editBtn.setAttribute('aria-expanded', 'false');
+  };
 
   editBtn.addEventListener('click', () => {
+    if (editing) return;
     selectOption();
-    editArea.value = textEl.dataset.custom || textEl.dataset.original || '';
-    editor.classList.add('open');
+    editing = true;
+    editBtn.disabled = true;
     editBtn.setAttribute('aria-expanded', 'true');
+
+    const value = currentValue();
+    textEl.textContent = '';
+
+    editArea = document.createElement('textarea');
+    editArea.className = 'note-input inline-markdown-editor';
+    editArea.value = value;
+    editArea.rows = Math.max(8, Math.min(24, value.split('\n').length + 2));
+    editArea.spellcheck = true;
+    editArea.placeholder = 'Edita el Markdown…';
+    textEl.appendChild(editArea);
+
+    actions = el('div', 'editor-actions');
+    const saveBtn = el('button', 'save-edit', 'Guardar');
+    saveBtn.type = 'button';
+    const cancelBtn = el('button', 'cancel-edit', 'Cancelar');
+    cancelBtn.type = 'button';
+    actions.append(saveBtn, cancelBtn);
+    content.appendChild(actions);
+
+    saveBtn.addEventListener('click', () => finishEdit(true));
+    cancelBtn.addEventListener('click', () => finishEdit(false));
+
     editArea.focus();
+    editArea.setSelectionRange(editArea.value.length, editArea.value.length);
   });
 
-  saveBtn.addEventListener('click', () => {
-    const value = editArea.value.trim();
-    if (!value) return;
-    textEl.dataset.custom = value;
-    setOptionText(
-      textEl,
-      value,
-      Boolean(option.recommended),
-      true,
-      optionCount > 1
-    );
-    editor.classList.remove('open');
-    editBtn.setAttribute('aria-expanded', 'false');
+  textEl.addEventListener('click', event => {
+    if (editing || event.target.closest('a, button, textarea')) return;
+    selectOption();
   });
 
-  cancelBtn.addEventListener('click', () => {
-    editor.classList.remove('open');
-    editBtn.setAttribute('aria-expanded', 'false');
-  });
-
-  row.append(input, content, editBtn, editor);
+  row.append(input, content, editBtn);
   return row;
 }
 
@@ -190,11 +179,9 @@ function createSkipOption(sectionIndex) {
 
   const label = el('label', 'skip-label', 'No implementar');
   label.htmlFor = input.id;
-
   const help = el('div', 'skip-help', 'No hacer ningún cambio en este punto.');
   const content = el('div', 'skip-content');
   content.append(label, help);
-
   row.append(input, content);
   return row;
 }
@@ -214,7 +201,6 @@ function createOtherOption(sectionIndex, inputType, defaultChecked) {
   const content = el('div', 'other-content');
   const label = el('label', 'option-kicker', 'Otra');
   label.htmlFor = input.id;
-
   const holder = el('div', 'other-holder');
   const otherInput = document.createElement('textarea');
   otherInput.className = 'other-input';
@@ -226,14 +212,12 @@ function createOtherOption(sectionIndex, inputType, defaultChecked) {
   const update = () => holder.classList.toggle('visible', input.checked);
   input.addEventListener('change', update);
   update();
-
   row.append(input, content);
   return row;
 }
 
 function createNote(section) {
   if (section.allowNote === false) return null;
-
   const wrap = el('div', 'note-wrap');
   const label = el('label', 'note-label', section.noteLabel || 'Nota');
   const area = document.createElement('textarea');
@@ -249,36 +233,16 @@ function renderChoiceSection(card, section, sectionIndex, multiple) {
   const inputType = multiple ? 'checkbox' : 'radio';
   const defaults = multiple
     ? new Set((section.defaultOptions || []).map(String))
-    : new Set(
-        section.defaultOption !== undefined && section.defaultOption !== null
-          ? [String(section.defaultOption)]
-          : []
-      );
+    : new Set(section.defaultOption !== undefined && section.defaultOption !== null ? [String(section.defaultOption)] : []);
 
   const options = section.options || [];
   options.forEach(option => {
     const checked = defaults.has(String(option.id)) || Boolean(option.selected);
-    card.appendChild(
-      createEditableOption(
-        section,
-        sectionIndex,
-        option,
-        inputType,
-        checked,
-        options.length
-      )
-    );
+    card.appendChild(createEditableOption(section, sectionIndex, option, inputType, checked, options.length));
   });
 
-  if (!multiple) {
-    card.appendChild(createSkipOption(sectionIndex));
-  }
-
-  if (section.allowOther) {
-    card.appendChild(
-      createOtherOption(sectionIndex, inputType, Boolean(section.defaultOther))
-    );
-  }
+  if (!multiple) card.appendChild(createSkipOption(sectionIndex));
+  if (section.allowOther) card.appendChild(createOtherOption(sectionIndex, inputType, Boolean(section.defaultOther)));
 }
 
 function renderTextSection(card, section) {
@@ -295,7 +259,6 @@ function renderBooleanSection(card, section, sectionIndex) {
     { value: 'true', label: section.trueLabel || 'Sí' },
     { value: 'false', label: section.falseLabel || 'No' }
   ];
-
   const holder = el('div', 'boolean-holder');
   values.forEach(item => {
     const row = el('label', 'boolean-row');
@@ -317,10 +280,7 @@ function renderSection(section, sectionIndex) {
   card.dataset.type = section.type || 'single';
 
   const title = el('h2', 'section-title');
-  renderMarkdownInline(
-    title,
-    section.title || `${sectionIndex + 1}. ${section.id || 'Decisión'}`
-  );
+  renderMarkdownInline(title, section.title || `${sectionIndex + 1}. ${section.id || 'Decisión'}`);
   card.appendChild(title);
 
   if (section.description) {
@@ -330,36 +290,25 @@ function renderSection(section, sectionIndex) {
   }
 
   switch (card.dataset.type) {
-    case 'multiple':
-      renderChoiceSection(card, section, sectionIndex, true);
-      break;
-    case 'text':
-      renderTextSection(card, section);
-      break;
-    case 'boolean':
-      renderBooleanSection(card, section, sectionIndex);
-      break;
+    case 'multiple': renderChoiceSection(card, section, sectionIndex, true); break;
+    case 'text': renderTextSection(card, section); break;
+    case 'boolean': renderBooleanSection(card, section, sectionIndex); break;
     case 'single':
-    default:
-      renderChoiceSection(card, section, sectionIndex, false);
-      break;
+    default: renderChoiceSection(card, section, sectionIndex, false); break;
   }
 
   const note = createNote(section);
   if (note) card.appendChild(note);
-
   return card;
 }
 
 function selectedOptionMarkdown(row) {
   const textEl = row?.querySelector('.option-text');
-  if (!textEl) return '';
-  return textEl.dataset.custom || textEl.dataset.original || '';
+  return textEl ? (textEl.dataset.custom || textEl.dataset.original || '') : '';
 }
 
 function buildOutput() {
   if (!currentPlan) return '';
-
   const lines = [];
   const id = currentPlan.id || 'plan';
   const version = currentPlan.version !== undefined ? ` · v${currentPlan.version}` : '';
@@ -369,29 +318,17 @@ function buildOutput() {
     const section = currentPlan.sections[index] || {};
     const title = section.title || `${index + 1}. ${section.id || 'Decisión'}`;
     lines.push(title);
-
     const type = card.dataset.type;
 
     if (type === 'text') {
       lines.push(`Respuesta: ${card.querySelector('.free-text')?.value.trim() || ''}`);
     } else if (type === 'boolean') {
       const selected = card.querySelector('.boolean-choice:checked');
-      lines.push(
-        `Respuesta: ${
-          selected
-            ? selected.value === 'true'
-              ? section.trueLabel || 'Sí'
-              : section.falseLabel || 'No'
-            : 'Sin seleccionar'
-        }`
-      );
+      lines.push(`Respuesta: ${selected ? (selected.value === 'true' ? section.trueLabel || 'Sí' : section.falseLabel || 'No') : 'Sin seleccionar'}`);
     } else if (type === 'multiple') {
       const selected = [...card.querySelectorAll('.choice:checked')];
-      const ids = selected.map(input =>
-        input.value === '__other' ? 'Otra' : input.value
-      );
+      const ids = selected.map(input => input.value === '__other' ? 'Otra' : input.value);
       lines.push(`Respuesta: ${ids.length ? ids.join(', ') : 'Ninguna'}`);
-
       selected.forEach(input => {
         const row = input.closest('.option-row');
         if (input.value === '__other') {
@@ -404,34 +341,24 @@ function buildOutput() {
       });
     } else {
       const selected = card.querySelector('.choice:checked');
-
       if (!selected) {
         lines.push('Decisión: Sin seleccionar');
       } else if (selected.value === '__skip') {
         lines.push('Decisión: No implementar');
       } else if (selected.value === '__other') {
-        const value = selected
-          .closest('.option-row')
-          .querySelector('.other-input')
-          ?.value.trim();
+        const value = selected.closest('.option-row').querySelector('.other-input')?.value.trim();
         lines.push(`Decisión: Otra${value ? ` - ${value}` : ''}`);
       } else {
         const row = selected.closest('.option-row');
         const optionCount = (section.options || []).length;
         const custom = row.querySelector('.option-text')?.dataset.custom;
-        const label = optionCount === 1
-          ? 'Implementar'
-          : `Opción ${selected.value}`;
-
+        const label = optionCount === 1 ? 'Implementar' : `Opción ${selected.value}`;
         lines.push(`Decisión: ${label}${custom ? ' (editada)' : ''}`);
-
-        if (custom) {
-          lines.push('', 'Contenido editado:', selectedOptionMarkdown(row));
-        }
+        if (custom) lines.push('', 'Contenido editado:', selectedOptionMarkdown(row));
       }
     }
 
-    const note = card.querySelector('.note-input')?.value.trim();
+    const note = card.querySelector('.note-input:not(.inline-markdown-editor)')?.value.trim();
     if (note) lines.push(`Nota: ${note}`);
     lines.push('');
   });
@@ -472,14 +399,10 @@ function renderPlan(plan, sha) {
   if (plan.id) metaParts.push(plan.id);
   if (plan.version !== undefined) metaParts.push(`v${plan.version}`);
   if (currentSha) metaParts.push(`SHA ${currentSha.slice(0, 8)}`);
-  if (metaParts.length) {
-    header.appendChild(el('div', 'plan-meta', metaParts.join(' · ')));
-  }
+  if (metaParts.length) header.appendChild(el('div', 'plan-meta', metaParts.join(' · ')));
   app.appendChild(header);
 
-  (plan.sections || []).forEach((section, index) => {
-    app.appendChild(renderSection(section, index));
-  });
+  (plan.sections || []).forEach((section, index) => app.appendChild(renderSection(section, index)));
 
   const actions = el('div', 'actions');
   const generateBtn = el('button', 'primary-btn', 'Generar respuesta');
@@ -502,56 +425,38 @@ function renderPlan(plan, sha) {
   };
 
   generateBtn.addEventListener('click', refreshResult);
-
   copyBtn.addEventListener('click', async () => {
     const text = refreshResult();
     await copyText(text);
     const old = copyBtn.textContent;
     copyBtn.textContent = 'Copiado ✓';
-    setTimeout(() => {
-      copyBtn.textContent = old;
-    }, 1000);
+    setTimeout(() => { copyBtn.textContent = old; }, 1000);
   });
 }
 
 function renderError(error) {
   app.textContent = '';
   const card = el('section', 'error-card');
-  card.append(
-    el('strong', '', 'No se pudo cargar data/current.json'),
-    el('pre', '', String(error))
-  );
+  card.append(el('strong', '', 'No se pudo cargar data/current.json'), el('pre', '', String(error)));
   app.appendChild(card);
 }
 
 async function loadCurrent() {
   statusEl.textContent = 'Consultando main…';
   reloadBtn.disabled = true;
-
   try {
     const response = await fetch(`${API_URL}&t=${Date.now()}`, {
       cache: 'no-store',
       headers: { Accept: 'application/vnd.github+json' }
     });
-
-    if (!response.ok) {
-      throw new Error(`GitHub API respondió HTTP ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`GitHub API respondió HTTP ${response.status}`);
     const file = await response.json();
-    if (!file.content) {
-      throw new Error('GitHub no devolvió el contenido del JSON.');
-    }
-
+    if (!file.content) throw new Error('GitHub no devolvió el contenido del JSON.');
     const jsonText = decodeBase64Utf8(file.content);
     const plan = JSON.parse(jsonText);
-    if (!Array.isArray(plan.sections)) {
-      throw new Error('El JSON debe contener un array "sections".');
-    }
-
+    if (!Array.isArray(plan.sections)) throw new Error('El JSON debe contener un array "sections".');
     renderPlan(plan, file.sha);
-    statusEl.textContent =
-      `SHA ${String(file.sha || '').slice(0, 8)} · ${new Date().toLocaleTimeString()}`;
+    statusEl.textContent = `SHA ${String(file.sha || '').slice(0, 8)} · ${new Date().toLocaleTimeString()}`;
   } catch (error) {
     statusEl.textContent = 'Error';
     renderError(error);
