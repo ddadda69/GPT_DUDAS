@@ -10,34 +10,46 @@
 </head>
 <body>
 <div class="top">
-  <div class="title">prueba3.html · carga directa desde GitHub</div>
+  <div class="title">prueba3.html · GitHub API</div>
   <span id="status" class="status">Cargando…</span>
   <button class="btn" id="reload">Recargar</button>
-  <button class="btn" id="openRaw">Abrir raw</button>
+  <button class="btn" id="openGitHub">Abrir GitHub</button>
 </div>
 <iframe id="viewer" class="viewer" title="prueba3.html"></iframe>
 <script>
-const RAW='https://raw.githubusercontent.com/ddadda69/GPT_DUDAS/main/prueba3.html';
+const API='https://api.github.com/repos/ddadda69/GPT_DUDAS/contents/prueba3.html?ref=main';
+const GITHUB='https://github.com/ddadda69/GPT_DUDAS/blob/main/prueba3.html';
 const frame=document.getElementById('viewer');
 const status=document.getElementById('status');
+function decodeBase64Utf8(base64){
+  const clean=base64.replace(/\s/g,'');
+  const bytes=Uint8Array.from(atob(clean),c=>c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
 async function load(){
-  status.textContent='Cargando desde GitHub…';
+  status.textContent='Consultando main…';
   try{
-    const r=await fetch(RAW+'?t='+Date.now(),{cache:'no-store'});
+    const sep=API.includes('?')?'&':'?';
+    const r=await fetch(API+sep+'t='+Date.now(),{
+      cache:'no-store',
+      headers:{'Accept':'application/vnd.github+json'}
+    });
     if(!r.ok) throw new Error('HTTP '+r.status);
-    let html=await r.text();
+    const data=await r.json();
+    if(!data.content) throw new Error('GitHub no devolvió contenido');
+    let html=decodeBase64Utf8(data.content);
     const base='<base href="https://raw.githubusercontent.com/ddadda69/GPT_DUDAS/main/">';
     if(/<head[^>]*>/i.test(html)) html=html.replace(/<head[^>]*>/i,m=>m+'\n'+base);
     else html=base+html;
     frame.srcdoc=html;
-    status.textContent='Cargada '+new Date().toLocaleTimeString();
+    status.textContent='SHA '+String(data.sha||'').slice(0,8)+' · '+new Date().toLocaleTimeString();
   }catch(e){
     status.textContent='Error al cargar';
     frame.srcdoc='<pre style="font-family:monospace;padding:12px">No se pudo cargar prueba3.html\n\n'+String(e).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</pre>';
   }
 }
 document.getElementById('reload').addEventListener('click',load);
-document.getElementById('openRaw').addEventListener('click',()=>window.open(RAW,'_blank'));
+document.getElementById('openGitHub').addEventListener('click',()=>window.open(GITHUB,'_blank'));
 load();
 </script>
 </body>
