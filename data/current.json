@@ -1,65 +1,72 @@
 {
   "$schema": "./schema.json",
-  "id": "consulta-actual",
+  "id": "wintabs-3-mejoras-complejas",
   "version": 1,
-  "title": "Plan de ejemplo",
-  "description": "Este archivo representa el contenido editable que el visualizador carga desde GitHub. Cuando preparemos un nuevo plan, se sustituye este JSON sin tocar el HTML ni el JavaScript.",
+  "title": "WinTabs — plan de 3 mejoras complejas",
+  "description": "Plan basado en el estado actual del repositorio. Las tres mejoras buscan que WinTabs pueda crecer sin seguir aumentando el acoplamiento de MainWindow y, al mismo tiempo, añadir capacidades de escritorio realmente nuevas.",
   "sections": [
     {
-      "id": "enfoque",
-      "title": "1. Enfoque general",
-      "description": "Elige la estrategia principal que prefieres para resolver la consulta.",
+      "id": "arquitectura-modular",
+      "title": "1. Arquitectura modular y sistema de módulos",
+      "description": "Separar MainWindow en piezas especializadas: BarController para la barra, PanelManager para ciclo de vida y visibilidad de paneles, GeometryManager para pantallas/DPI/posicionamiento, ActionRegistry para acciones y LauncherRegistry para elementos de la barra. Notas, Alarmas y Grabaciones pasarían a registrarse como módulos con metadatos, icono, widget y acciones, evitando tener que modificar MainWindow cada vez que se añade una función. También se aislaría la persistencia del estado de UI para poder probar la lógica sin levantar toda la interfaz.",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Aplicar una solución equilibrada que priorice simplicidad, mantenimiento y posibilidad de ampliar la implementación más adelante sin rehacer la base."
+          "text": "Migración incremental: extraer primero geometría, gestión de paneles y registro de acciones, manteniendo los widgets y comportamiento actuales. Después convertir Notas, Alarmas y Grabaciones al nuevo registro de módulos. Reduce mucho el riesgo de regresiones y permite comprobar cada fase con los tests existentes."
         },
         {
           "id": 2,
-          "text": "Elegir una solución mínima que cubra únicamente la necesidad inmediata, reduciendo al máximo el trabajo inicial aunque pueda requerir cambios posteriores."
-        },
-        {
-          "id": 3,
-          "text": "Diseñar desde el principio una solución más completa y extensible, aceptando una implementación inicial más grande a cambio de mayor flexibilidad futura."
+          "text": "Reestructuración completa de una vez alrededor de un sistema de plugins/módulos declarativos. El resultado final sería más limpio desde el primer momento, pero el cambio tocaría simultáneamente MainWindow, preferencias, configuración, paneles y construcción de tabs, aumentando bastante el riesgo de romper comportamientos actuales."
         }
       ],
       "allowOther": true,
-      "allowNote": true
+      "allowNote": true,
+      "notePlaceholder": "Matices sobre cómo quieres abordar el refactor…"
     },
     {
-      "id": "alcance",
-      "title": "2. Alcance",
-      "description": "Puedes seleccionar varias prioridades si son compatibles entre sí.",
-      "type": "multiple",
-      "defaultOptions": [1],
+      "id": "perfiles-contextuales",
+      "title": "2. Perfiles de escritorio contextuales y multi-monitor",
+      "description": "Crear un motor de perfiles para que WinTabs tenga configuraciones distintas según contexto. Cada perfil podría definir monitor, borde, tamaño, autoocultación, paneles visibles, accesos, orden y estado always-on-top. Ejemplos: Trabajo con IDE y carpetas de proyecto, Juego con barra mínima, y Personal con notas/grabaciones. El cambio exigiría versionar SettingsRepository, separar configuración global de configuración por perfil y añadir un ProfileManager capaz de aplicar un perfil sin reiniciar la aplicación.",
+      "type": "single",
+      "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Priorizar que la solución sea fácil de entender y modificar posteriormente."
+          "text": "Perfiles con reglas automáticas: además del cambio manual, permitir activar perfiles según proceso en primer plano y monitor activo, con prioridad de reglas y perfil fallback. Es la opción más potente y encaja con el modo juego existente sin basarlo en listas rígidas de juegos."
         },
         {
           "id": 2,
-          "text": "Priorizar el menor número posible de dependencias y componentes adicionales."
-        },
-        {
-          "id": 3,
-          "text": "Priorizar una experiencia de uso más completa aunque aumente algo la complejidad interna."
+          "text": "Una barra independiente por monitor, cada una con su propia configuración y paneles, pero sin reglas automáticas de contexto. Es mejor si el objetivo principal es trabajar simultáneamente con varias pantallas, aunque añade más ventanas Qt y complica sincronización, bandeja y gestión de paneles."
         }
       ],
       "allowOther": true,
-      "allowNote": true
+      "allowNote": true,
+      "notePlaceholder": "Indica perfiles, monitores o reglas que te interesen especialmente…"
     },
     {
-      "id": "observaciones",
-      "title": "3. Observaciones adicionales",
-      "description": "Campo libre para cualquier requisito que no encaje en las decisiones anteriores.",
-      "type": "text",
-      "placeholder": "Escribe aquí cualquier condición, preferencia o detalle adicional…",
-      "allowNote": false
+      "id": "command-palette",
+      "title": "3. Paleta global de comandos y búsqueda unificada",
+      "description": "Añadir una paleta invocable mediante atajo global que convierta WinTabs en un lanzador de acciones, no solo de tabs. Desde una sola caja se podrían buscar y abrir accesos, cambiar de nota, crear una nota rápida, localizar alarmas, iniciar una grabación, modificar volumen, abrir preferencias o ejecutar acciones futuras de nuevos módulos. Internamente se implementaría mediante proveedores de comandos registrados por cada módulo, búsqueda fuzzy, ranking por uso y un historial local de acciones recientes.",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Índice interno extensible mediante CommandProvider. Cada módulo aporta comandos y resultados; WinTabs controla el ranking, historial y búsqueda fuzzy. No introduce dependencias externas y la arquitectura queda preparada para que cualquier módulo futuro publique sus propias acciones."
+        },
+        {
+          "id": 2,
+          "text": "Paleta híbrida con proveedores internos más integración opcional con Everything para buscar cualquier fichero del PC casi instantáneamente. Sería más potente como launcher general de Windows, pero añade una dependencia externa y obliga a gestionar disponibilidad, configuración y fallback."
+        }
+      ],
+      "allowOther": true,
+      "allowNote": true,
+      "notePlaceholder": "Añade acciones o tipos de búsqueda que quieras incluir…"
     }
   ]
 }
