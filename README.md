@@ -12,7 +12,8 @@ GPT_DUDAS/
 │   └── styles.css
 ├── data/
 │   ├── current.json
-│   └── example.json
+│   ├── example.json
+│   └── schema.json
 └── README.md
 ```
 
@@ -31,21 +32,42 @@ GPT_DUDAS/
 - `app/styles.css`: diseño compacto y a ancho completo.
 - `data/current.json`: contenido activo. Es el archivo que debe cambiar con cada nuevo plan.
 - `data/example.json`: plantilla genérica de referencia; no debe contener información específica de una consulta real.
+- `data/schema.json`: JSON Schema Draft 2020-12 que define formalmente los campos y tipos admitidos por el formato.
 - `VISUALIZADOR.html`: alias de compatibilidad que redirige al `index.html`.
+
+`data/current.json` y `data/example.json` incluyen `"$schema": "./schema.json"` para que editores y herramientas compatibles puedan validar y autocompletar el formato.
+
+## Contrato JSON
+
+El contrato formal está en `data/schema.json`. La estructura raíz requiere:
+
+- `id`: identificador estable del plan.
+- `version`: entero >= 1.
+- `title`: título visible.
+- `sections`: una o más secciones.
+- `description`: opcional.
+
+Cada sección requiere `id`, `title` y `type`. Los tipos soportados son `single`, `multiple`, `text` y `boolean`.
+
+Las opciones de `single` y `multiple` requieren `id` y `text`, y pueden usar `recommended` y `selected`. Los IDs de opción pueden ser enteros o cadenas no vacías.
+
+El schema es estricto: rechaza campos desconocidos mediante `additionalProperties` / `unevaluatedProperties`. Si se amplía el visor con nuevos campos, debe actualizarse también `data/schema.json` y `data/example.json`.
 
 ## Tipos de sección
 
 ### `single`
-Una sola opción. Admite `defaultOption`, `options`, `allowOther` y `allowNote`.
+Una sola opción. Admite `defaultOption`, `options`, `allowOther`, `defaultOther` y `allowNote`.
 
 ### `multiple`
-Varias opciones compatibles. Admite `defaultOptions`, `options`, `allowOther` y `allowNote`.
+Varias opciones compatibles. Admite `defaultOptions`, `options`, `allowOther`, `defaultOther` y `allowNote`.
 
 ### `text`
-Respuesta libre mediante textarea.
+Respuesta libre mediante textarea. Admite `rows`, `placeholder` y `defaultValue`.
 
 ### `boolean`
 Decisión binaria. Admite `default`, `trueLabel` y `falseLabel`.
+
+Todas las secciones pueden usar `description`, `allowNote`, `noteLabel` y `notePlaceholder` cuando corresponda.
 
 ## Regla de copia
 
