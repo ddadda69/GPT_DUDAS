@@ -1,6 +1,42 @@
-# GPT_DUDAS · Decision Viewer
+# GPT_DUDAS · Plan Viewer
 
-Visor estático para presentar planes, alternativas y preguntas de decisión a partir de un único archivo JSON editable.
+Visor estático para presentar planes de ChatGPT con el mismo contenido que tendría una respuesta normal, añadiendo controles interactivos para decidir qué implementar, editar cada propuesta y dejar notas.
+
+## Idea principal
+
+El visor **no debe convertir un plan normal en un cuestionario artificial**.
+
+Si ChatGPT, respondiendo normalmente, propondría una sola solución para un punto, `data/current.json` debe contener **una sola opción** con todo el contenido de ese punto. El visor añade automáticamente debajo la opción fija **No implementar** y el campo **Nota**.
+
+Solo se añaden dos o más opciones cuando existe una decisión de implementación real y las alternativas cambiarían de forma relevante la solución.
+
+El texto de cada opción se escribe en Markdown y debe conservar la riqueza de una respuesta normal: párrafos, listas, **negrita**, `código inline`, bloques de código, tablas, enlaces y demás elementos soportados.
+
+## Comportamiento de cada punto `single`
+
+1. Se muestra el título del punto.
+2. Se muestra cada propuesta definida en `options` renderizada como Markdown.
+3. Cada propuesta tiene botón **Editar**. El editor trabaja directamente sobre el Markdown y vuelve a renderizarlo al guardar.
+4. El visor añade automáticamente una opción fija **No implementar**. No se incluye manualmente en el JSON.
+5. Debajo aparece siempre el campo **Nota**, salvo que `allowNote` sea `false`.
+
+Cuando una sección solo tiene una propuesta, no se muestra una etiqueta redundante tipo “Opción 1”; se ve directamente el contenido, para que visualmente se parezca a la respuesta que ChatGPT habría dado en el chat.
+
+Si una sección sí tiene varias alternativas reales, el visor las identifica como **Opción 1**, **Opción 2**, etc., y puede marcar la recomendada.
+
+## Estilo
+
+La interfaz usa un tema oscuro inspirado en el aspecto del chat de ChatGPT:
+
+- fondo `#212121`;
+- texto claro;
+- anchura de lectura limitada;
+- separadores discretos;
+- código inline con fondo gris;
+- bloques de código oscuros;
+- listas, tablas, enlaces y citas con estilos Markdown coherentes.
+
+El Markdown se renderiza con `marked` y se sanea con `DOMPurify`.
 
 ## Estructura
 
@@ -20,72 +56,48 @@ GPT_DUDAS/
 ## Flujo de uso
 
 1. GitHub Pages publica `index.html` y los archivos de `app/`.
-2. El visor consulta directamente la GitHub Contents API para leer `data/current.json` de la rama `main`.
-3. Cuando haya un nuevo plan o consulta, normalmente solo se modifica `data/current.json`.
-4. El botón **Recargar** vuelve a consultar GitHub y muestra el SHA recibido, evitando depender del despliegue de Pages para cada cambio de contenido.
-5. El usuario selecciona opciones, añade notas o edita una respuesta y pulsa **Copiar para ChatGPT**.
-
-## Archivos
-
-- `index.html`: carcasa permanente del visor.
-- `app/viewer.js`: renderizado, edición, recarga desde GitHub y generación de la respuesta.
-- `app/styles.css`: diseño compacto y a ancho completo.
-- `data/current.json`: contenido activo. Es el archivo que debe cambiar con cada nuevo plan.
-- `data/example.json`: plantilla genérica de referencia; no debe contener información específica de una consulta real.
-- `data/schema.json`: JSON Schema Draft 2020-12 que define formalmente los campos y tipos admitidos por el formato.
-- `VISUALIZADOR.html`: alias de compatibilidad que redirige al `index.html`.
-
-`data/current.json` y `data/example.json` incluyen `"$schema": "./schema.json"` para que editores y herramientas compatibles puedan validar y autocompletar el formato.
+2. El visor consulta directamente la GitHub Contents API para leer `data/current.json` de `main`.
+3. Para cada nuevo plan normalmente solo se sustituye `data/current.json`.
+4. **Recargar** vuelve a consultar GitHub y muestra el SHA recibido.
+5. El usuario elige implementar una propuesta o **No implementar**, puede editar el contenido y añadir una nota.
+6. **Generar respuesta** / **Copiar para ChatGPT** produce un resumen de las decisiones para continuar la conversación.
 
 ## Contrato JSON
 
-El contrato formal está en `data/schema.json`. La estructura raíz requiere:
+El contrato formal está en `data/schema.json`.
 
-- `id`: identificador estable del plan.
-- `version`: entero >= 1.
-- `title`: título visible.
-- `sections`: una o más secciones.
-- `description`: opcional.
+Para planes normales, la estructura recomendada de cada punto es:
 
-Cada sección requiere `id`, `title` y `type`. Los tipos soportados son `single`, `multiple`, `text` y `boolean`.
-
-Las opciones de `single` y `multiple` requieren `id` y `text`, y pueden usar `recommended` y `selected`. Los IDs de opción pueden ser enteros o cadenas no vacías.
-
-El schema es estricto: rechaza campos desconocidos mediante `additionalProperties` / `unevaluatedProperties`. Si se amplía el visor con nuevos campos, debe actualizarse también `data/schema.json` y `data/example.json`.
-
-## Tipos de sección
-
-### `single`
-Una sola opción. Admite `defaultOption`, `options`, `allowOther`, `defaultOther` y `allowNote`.
-
-### `multiple`
-Varias opciones compatibles. Admite `defaultOptions`, `options`, `allowOther`, `defaultOther` y `allowNote`.
-
-### `text`
-Respuesta libre mediante textarea. Admite `rows`, `placeholder` y `defaultValue`.
-
-### `boolean`
-Decisión binaria. Admite `default`, `trueLabel` y `falseLabel`.
-
-Todas las secciones pueden usar `description`, `allowNote`, `noteLabel` y `notePlaceholder` cuando corresponda.
-
-## Regla de copia
-
-Las opciones predefinidas se copian solo por su número/ID. Si el usuario edita el texto de una opción, la salida la marca como `modificada` e incluye el nuevo texto. La opción `Otra` siempre incluye el texto escrito. Las notas se incluyen únicamente cuando tienen contenido.
-
-Ejemplo:
-
-```text
-Plan: consulta-actual · v3
-
-1. Arquitectura
-Respuesta: 2
-Nota: Mantener compatibilidad con la versión anterior.
-
-2. Interfaz
-Respuesta: 1 (modificada) - Usar esta alternativa pero sin añadir un botón nuevo.
+```json
+{
+  "id": "punto-1",
+  "title": "1. Título del punto",
+  "type": "single",
+  "defaultOption": 1,
+  "options": [
+    {
+      "id": 1,
+      "recommended": true,
+      "text": "Contenido **completo** del punto en Markdown."
+    }
+  ],
+  "allowOther": false,
+  "allowNote": true
+}
 ```
+
+No añadas una segunda opción solo para que haya algo que elegir. Si ChatGPT no la habría propuesto en una respuesta normal, tampoco debe aparecer en el Viewer.
+
+La opción **No implementar** pertenece al visor y no al JSON.
+
+## Otros tipos
+
+El schema mantiene compatibilidad con `multiple`, `text` y `boolean`, aunque para planes de implementación la forma preferida es `single` por punto.
+
+`allowOther` sigue existiendo por compatibilidad, pero en los planes normales debería ser `false` salvo que exista una razón concreta para permitir una alternativa escrita completamente por el usuario.
 
 ## Caché y GitHub Pages
 
-Los cambios en `index.html`, `app/viewer.js` o `app/styles.css` sí necesitan un nuevo despliegue de GitHub Pages. Una vez estable el visor, los cambios habituales se realizan solo en `data/current.json`, que se consulta directamente desde GitHub y no necesita esperar al despliegue de Pages.
+Los cambios en `data/current.json` se leen directamente desde la API de GitHub y suelen estar disponibles al recargar inmediatamente.
+
+Los cambios en `index.html`, `app/viewer.js` o `app/styles.css` necesitan que GitHub Pages publique el nuevo commit; por eso pueden tardar algo más en verse que un simple cambio de `current.json`.
