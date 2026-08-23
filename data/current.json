@@ -1,4 +1,5 @@
 {
+  "$schema": "./schema.json",
   "id": "consulta-actual",
   "version": 1,
   "title": "Plan de ejemplo",
