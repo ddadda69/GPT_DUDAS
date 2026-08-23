@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
-  "title": "GPT_DUDAS Decision Plan",
-  "description": "Contrato formal para data/current.json y data/example.json.",
+  "title": "GPT_DUDAS Plan Viewer",
+  "description": "Contrato formal para data/current.json y data/example.json. Los títulos, descripciones y textos de opción admiten Markdown. En secciones single, el visor añade automáticamente la opción fija 'No implementar'; no debe incluirse manualmente en el JSON.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "version", "title", "sections"],
@@ -20,10 +20,12 @@
     },
     "title": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "contentMediaType": "text/markdown"
     },
     "description": {
-      "type": "string"
+      "type": "string",
+      "contentMediaType": "text/markdown"
     },
     "sections": {
       "type": "array",
@@ -54,7 +56,9 @@
           "$ref": "#/$defs/optionId"
         },
         "text": {
-          "type": "string"
+          "type": "string",
+          "description": "Contenido completo de la propuesta tal como se mostraría en una respuesta normal de ChatGPT. Admite Markdown, listas, negrita, código inline y bloques de código.",
+          "contentMediaType": "text/markdown"
         },
         "recommended": {
           "type": "boolean"
@@ -74,10 +78,12 @@
         },
         "title": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "contentMediaType": "text/markdown"
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "contentMediaType": "text/markdown"
         },
         "type": {
           "enum": ["single", "multiple", "text", "boolean"]
