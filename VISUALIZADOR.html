@@ -1,56 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Visualizador directo - prueba3.html</title>
-<style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:"Segoe UI",Arial,sans-serif;background:#111;color:#fff}.top{height:42px;display:flex;align-items:center;gap:8px;padding:4px 6px;background:#171717;border-bottom:1px solid #333}.title{font-weight:700;font-size:14px;margin-right:auto}.status{font-size:12px;color:#aaa}.btn{border:1px solid #444;background:#262626;color:#fff;border-radius:5px;padding:5px 9px;cursor:pointer}.btn:hover{background:#333}.viewer{width:100%;height:calc(100vh - 42px);border:0;background:#fff;display:block}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0; url=./">
+  <title>Decision Viewer</title>
+  <script>location.replace('./');</script>
 </head>
 <body>
-<div class="top">
-  <div class="title">prueba3.html · GitHub API</div>
-  <span id="status" class="status">Cargando…</span>
-  <button class="btn" id="reload">Recargar</button>
-  <button class="btn" id="openGitHub">Abrir GitHub</button>
-</div>
-<iframe id="viewer" class="viewer" title="prueba3.html"></iframe>
-<script>
-const API='https://api.github.com/repos/ddadda69/GPT_DUDAS/contents/prueba3.html?ref=main';
-const GITHUB='https://github.com/ddadda69/GPT_DUDAS/blob/main/prueba3.html';
-const frame=document.getElementById('viewer');
-const status=document.getElementById('status');
-function decodeBase64Utf8(base64){
-  const clean=base64.replace(/\s/g,'');
-  const bytes=Uint8Array.from(atob(clean),c=>c.charCodeAt(0));
-  return new TextDecoder('utf-8').decode(bytes);
-}
-async function load(){
-  status.textContent='Consultando main…';
-  try{
-    const sep=API.includes('?')?'&':'?';
-    const r=await fetch(API+sep+'t='+Date.now(),{
-      cache:'no-store',
-      headers:{'Accept':'application/vnd.github+json'}
-    });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const data=await r.json();
-    if(!data.content) throw new Error('GitHub no devolvió contenido');
-    let html=decodeBase64Utf8(data.content);
-    const base='<base href="https://raw.githubusercontent.com/ddadda69/GPT_DUDAS/main/">';
-    if(/<head[^>]*>/i.test(html)) html=html.replace(/<head[^>]*>/i,m=>m+'\n'+base);
-    else html=base+html;
-    frame.srcdoc=html;
-    status.textContent='SHA '+String(data.sha||'').slice(0,8)+' · '+new Date().toLocaleTimeString();
-  }catch(e){
-    status.textContent='Error al cargar';
-    frame.srcdoc='<pre style="font-family:monospace;padding:12px">No se pudo cargar prueba3.html\n\n'+String(e).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</pre>';
-  }
-}
-document.getElementById('reload').addEventListener('click',load);
-document.getElementById('openGitHub').addEventListener('click',()=>window.open(GITHUB,'_blank'));
-load();
-</script>
+  <p>El visualizador se ha movido a <a href="./">index.html</a>.</p>
 </body>
 </html>
