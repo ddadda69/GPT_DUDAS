@@ -1,0 +1,64 @@
+{
+  "id": "consulta-actual",
+  "version": 1,
+  "title": "Plan de ejemplo",
+  "description": "Este archivo representa el contenido editable que el visualizador carga desde GitHub. Cuando preparemos un nuevo plan, se sustituye este JSON sin tocar el HTML ni el JavaScript.",
+  "sections": [
+    {
+      "id": "enfoque",
+      "title": "1. Enfoque general",
+      "description": "Elige la estrategia principal que prefieres para resolver la consulta.",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Aplicar una solución equilibrada que priorice simplicidad, mantenimiento y posibilidad de ampliar la implementación más adelante sin rehacer la base."
+        },
+        {
+          "id": 2,
+          "text": "Elegir una solución mínima que cubra únicamente la necesidad inmediata, reduciendo al máximo el trabajo inicial aunque pueda requerir cambios posteriores."
+        },
+        {
+          "id": 3,
+          "text": "Diseñar desde el principio una solución más completa y extensible, aceptando una implementación inicial más grande a cambio de mayor flexibilidad futura."
+        }
+      ],
+      "allowOther": true,
+      "allowNote": true
+    },
+    {
+      "id": "alcance",
+      "title": "2. Alcance",
+      "description": "Puedes seleccionar varias prioridades si son compatibles entre sí.",
+      "type": "multiple",
+      "defaultOptions": [1],
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Priorizar que la solución sea fácil de entender y modificar posteriormente."
+        },
+        {
+          "id": 2,
+          "text": "Priorizar el menor número posible de dependencias y componentes adicionales."
+        },
+        {
+          "id": 3,
+          "text": "Priorizar una experiencia de uso más completa aunque aumente algo la complejidad interna."
+        }
+      ],
+      "allowOther": true,
+      "allowNote": true
+    },
+    {
+      "id": "observaciones",
+      "title": "3. Observaciones adicionales",
+      "description": "Campo libre para cualquier requisito que no encaje en las decisiones anteriores.",
+      "type": "text",
+      "placeholder": "Escribe aquí cualquier condición, preferencia o detalle adicional…",
+      "allowNote": false
+    }
+  ]
+}
