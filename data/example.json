@@ -1,4 +1,5 @@
 {
+  "$schema": "./schema.json",
   "id": "plantilla-generica",
   "version": 1,
   "title": "Plantilla genérica de decisiones",
