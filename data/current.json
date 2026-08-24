@@ -1,156 +1,126 @@
 {
   "$schema": "./schema.json",
-  "id": "uctupus-bddiagram-correcciones-rama-2026-08-24",
+  "id": "uctupus-bddiagram-esquema-interno-editor-ddl-2026-08-24",
   "version": 1,
-  "title": "Plan de correcciones para hacer merge seguro de la rama de mejoras",
-  "description": "He validado la rama `feature/approved-plan-2026-08-23` antes de preparar este plan.\n\n**Resultados de las pruebas**\n\n- Compila con Java 21 y Eclipse 2026-06.\n- Pasan 13 pruebas existentes, incluidas dos ejecuciones reales contra Oracle.\n- El diagnóstico JDBC básico registra SQL, bindings, filas y finalización correctamente.\n- `EXPLAIN PLAN + DBMS_XPLAN` funciona contra Oracle local: 13 líneas RAW convertidas en 2 nodos visuales.\n- El snapshot básico guarda, carga y compara correctamente una ejecución idéntica.\n- 60 capturas del historial actual sobre un `.bddiagram` de 140 KB tardan unos **8,7 s** acumulados.\n- Exportar 100.000 filas a CSV agota una JVM con 128 MB dentro del `StringBuilder`.\n- El JSON jerárquico pierde las filas cuando los enlaces forman un ciclo.\n- Los `TIMESTAMP` de SQL INSERT y la neutralización de fórmulas CSV no están resueltos.\n\n**Decisión funcional para Undo/Redo**\n\nUndo/Redo será **estructural y de configuración**, no un historial de presentación. Ejecutar o limpiar resultados, autoorganizar, mover/redimensionar nodos o grupos, ajustar alturas a resultados, editar rutas gráficas, hacer zoom, desplazar el lienzo, seleccionar o minimizar elementos no generará comandos. Esto evita llenar el historial con cambios derivados o puramente visuales.\n\nEl plan mantiene **Árbol de relaciones** como flujo principal, conserva compatibilidad con **Tablas únicas**, no añade autosave, no convierte la ventana en un `EditorPart` y no introduce CI.",
+  "title": "Plan para auditar, editar y exportar el esquema interno de un `.bddiagram`",
+  "description": "El objetivo es que un `.bddiagram` deje de mezclar tres conceptos distintos y que el usuario pueda saber siempre qué está modificando:\n\n1. **Esquema interno:** tablas, vistas, columnas, PK, UNIQUE, FK y relaciones lógicas conocidas por el documento.\n2. **Exploración:** raíces, instancias, ramas, consultas, parámetros, límites y qué parte del esquema se recorre.\n3. **Presentación:** posiciones, tamaños, grupos, zoom, columnas mostradas y organización visual.\n\nLas operaciones visuales y de recorrido no modificarán el esquema interno. Eliminar estructura solo será posible desde una acción explícita de edición del esquema, con análisis de impacto previo. Ninguna operación ejecutará DDL contra Oracle.\n\n**Principios de seguridad**\n\n- **Quitar nodo/rama** significa retirarlo de la exploración, no borrar su tabla.\n- **Eliminar del esquema interno** será una acción distinta, claramente destructiva y deshará dependencias de forma atómica.\n- La exportación DDL se generará desde el modelo interno actual, no copiando ciegamente el DDL original.\n- Todos los cambios estructurales entrarán como un único comando en Undo/Redo.\n- **Árbol de relaciones** seguirá siendo el flujo principal; **Tablas únicas** conservará compatibilidad.",
   "sections": [
     {
-      "id": "undo-redo-estructural",
-      "title": "1. Sustituir el Undo/Redo global por un historial estructural real",
+      "id": "capas-e-invariantes",
+      "title": "1. Formalizar las tres capas y sus invariantes",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Eliminaría el historial basado en serializar todo el documento y lo sustituiría por un **`DiagramCommandStack` de comandos/deltas explícitos**.\n\n**Sí generará un paso de Undo/Redo:**\n\n- añadir, eliminar, suprimir o restaurar nodos y ramas;\n- crear, eliminar o modificar relaciones manuales y vínculos de parámetros;\n- activar o desactivar ramas;\n- cambiar padre/FK, dirección, cardinalidad asumida o configuración de recorrido;\n- crear/eliminar grupos, renombrarlos o cambiar su pertenencia;\n- cambiar aliases, presentación, columnas visibles y orden lógico de columnas;\n- modificar filtros, `ORDER BY`, límites y timeout por nodo;\n- crear, editar, eliminar o seleccionar consultas guardadas y parámetros;\n- editar nodos SQL personalizados;\n- fusionar/importar/aplicar cambios de esquema;\n- reordenar hermanos cuando ese orden sea parte persistente de la exploración.\n\n**No generará historial:**\n\n- ejecutar/cancelar/limpiar resultados y cambios de altura derivados de resultados;\n- mover o redimensionar nodos y grupos;\n- autoorganizar todo, una rama o un grupo;\n- orientación/espaciado de layout, rutas dibujadas y puntos de control;\n- zoom, pan, scroll, selección, hover, filas seleccionadas;\n- minimizar/expandir, pin visual y anchos de columnas de presentación;\n- abrir buscador, inspector, exportaciones o ventanas auxiliares.\n\nCada operación compleja será **un solo comando atómico**: eliminar una rama completa se deshace de una vez. Los comandos guardarán únicamente el fragmento afectado y la información necesaria para restaurarlo; no escribirán ficheros temporales ni copiarán todo el esquema.\n\nAl deshacer una operación estructural se conservará el layout visual actual de los elementos que siguen existiendo. Un nodo restaurado recuperará la posición que tenía justo al eliminarlo, pero no se recolocará el resto del diagrama. Nunca se llamará a `populateDocument(true)` desde Undo/Redo.\n\nAñadiría también:\n\n- límite de historial por comandos, no por tamaño de documento;\n- invalidación de Redo al ejecutar un nuevo comando estructural;\n- etiquetas como «Eliminar rama» o «Cambiar alias» para tooltips/estado;\n- savepoint para que el dirty state distinga cambios estructurales deshechos de cambios visuales no deshechables;\n- prioridad al Undo nativo de un campo de texto cuando el foco esté escribiendo.\n\n**Dificultad:** media-alta.  \n**Impacto:** crítico; es el primer bloqueo de merge."
+          "text": "Introduciría una separación explícita entre **esquema**, **exploración** y **presentación**, sin reescribir todo el modelo.\n\nAñadiría un servicio `SchemaObjectUsageIndex` que, para cada tabla, vista, columna y relación, calcule:\n\n- instancias visibles en el lienzo;\n- instancias existentes pero excluidas;\n- nodos suprimidos que pueden restaurarse;\n- pertenencia o no al recorrido activo;\n- consultas, parámetros, ordenaciones y columnas visibles que lo referencian;\n- relaciones FK usadas por rutas y relaciones internas no utilizadas;\n- origen importado, lógico o personalizado.\n\nEl índice será derivado y reconstruible; no duplicará información dentro del `.bddiagram`. Se invalidará únicamente con cambios estructurales o de exploración, nunca al mover nodos, ejecutar consultas o cambiar zoom.\n\n**Invariantes:**\n\n- una instancia visible siempre referencia un objeto válido del esquema o una definición personalizada válida;\n- eliminar una instancia no elimina el objeto estructural;\n- ninguna referencia a columna/FK puede quedar colgante después de aplicar una edición de esquema;\n- el esquema interno es la fuente autoritativa para exportar DDL.\n\n**Dificultad:** media.  \n**Impacto:** alto; proporciona la base para auditar y editar sin ambigüedad."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "visor-esquema-interno",
+      "title": "2. Añadir un visor explícito del esquema interno",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Añadiría una acción visible **Esquema interno…** en la ventana del diagrama. Abrirá una ventana modeless amplia, reutilizando el árbol estructural del importador pero orientada a auditoría.\n\nEl árbol mostrará todas las tablas y vistas internas, aunque no tengan ningún nodo visible. Cada objeto tendrá un estado inequívoco:\n\n- **Visible**: tiene una o varias instancias en el lienzo;\n- **Fuera del recorrido**: existe en el esquema pero la consulta activa no lo alcanza;\n- **Excluido**: existe una instancia desactivada;\n- **Suprimido**: se retiró del diagrama y puede restaurarse;\n- **Sin instancia**: está importado pero nunca se añadió al lienzo;\n- **Personalizado**: procede de SQL o de una definición manual;\n- **Relación no usada**: existe en el esquema, pero ninguna ruta del diagrama la utiliza.\n\nIncluirá filtros por estado, búsqueda por tabla/columna/FK y contadores como `2 instancias · 1 consulta · 3 parámetros`. Desde cada objeto se podrá:\n\n- centrar una instancia visible;\n- añadir una instancia al diagrama;\n- restaurar una instancia suprimida;\n- abrir sus dependencias;\n- iniciar la edición estructural;\n- exportar el DDL del objeto.\n\nLa sección actual **Fuera del recorrido** seguirá existiendo como acceso rápido, pero el nuevo visor será el inventario completo y fiable.\n\n**Dificultad:** media.  \n**Impacto:** muy alto en comprensión y mantenimiento de diagramas existentes."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "editor-esquema-reutilizado",
+      "title": "3. Reutilizar el editor de importación para editar un `.bddiagram` existente",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "La acción **Editar esquema interno…** abrirá el mismo editor estructural usado durante la importación, pero en modo edición de documento.\n\nTrabajará sobre una copia profunda del esquema actual y permitirá:\n\n- añadir, renombrar o eliminar tablas y vistas;\n- añadir, editar o eliminar columnas;\n- modificar PK y claves únicas;\n- crear, editar o eliminar FK y relaciones lógicas;\n- incorporar objetos desde otro DDL o desde Oracle;\n- revisar objetos personalizados y sus columnas conocidas.\n\nNo reutilizará el paso del importador que crea raíces y rutas nuevas. Al pulsar **Aplicar**, se calculará un `SchemaEditDelta` entre el esquema original y el editado. Ese delta se validará antes de modificar el documento y se aplicará como un único comando estructural de Undo/Redo.\n\nCancelar cerrará el editor sin cambiar el `.bddiagram`. Aplicar nunca ejecutará `CREATE`, `ALTER` ni `DROP` en Oracle.\n\n**Dificultad:** media-alta.  \n**Impacto:** alto; evita mantener dos editores estructurales diferentes."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "impacto-eliminaciones",
+      "title": "4. Diferenciar quitar del diagrama de eliminar del esquema",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Las acciones y textos distinguirán claramente dos operaciones:\n\n### Quitar nodo o rama del diagrama\n\n- elimina únicamente esa instancia o recorrido;\n- conserva tabla, columnas, PK y FK en el esquema interno;\n- permite volver a añadir o restaurar el objeto;\n- no afecta otras instancias de la misma tabla;\n- no modifica el DDL exportado del esquema completo.\n\n### Eliminar del esquema interno\n\nSolo estará disponible dentro del editor estructural y abrirá una pantalla de impacto antes de habilitar **Aplicar**. Mostrará exactamente:\n\n- nodos e instancias que desaparecerán;\n- ramas que dependen de una FK eliminada;\n- consultas y parámetros afectados;\n- columnas visibles, filtros, `ORDER BY` y límites que perderían referencias;\n- relaciones manuales y vínculos de parámetros invalidados;\n- grupos visuales que quedarían vacíos;\n- objetos personalizados cuyo SQL no pueda repararse automáticamente.\n\nReglas de cascada:\n\n- eliminar una tabla/vista elimina todas sus instancias y relaciones estructurales;\n- eliminar una columna elimina o invalida PK, UNIQUE y mapeos FK que la usan;\n- eliminar una FK elimina las rutas basadas en ella, pero no las tablas de sus extremos;\n- las dependencias reparables se actualizan; las ambiguas bloquean la aplicación y exigen decisión explícita;\n- toda la operación se deshace de una vez con Undo.\n\nLos menús usarán nombres completos —**Quitar instancia del diagrama** y **Eliminar tabla del esquema interno**— para impedir confusiones.\n\n**Dificultad:** alta.  \n**Impacto:** crítico para evitar pérdida accidental de configuración."
         }
       ],
       "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Matiza qué otros cambios deberían o no entrar en el historial…"
+      "notePlaceholder": "Matiza qué dependencias deberían bloquear o permitir una eliminación…"
     },
     {
-      "id": "integracion-explicita-sin-reflexion",
-      "title": "2. Eliminar filtros globales y reflexión de la capa runtime",
+      "id": "exportar-ddl-actual",
+      "title": "5. Exportar el DDL real del esquema interno",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Eliminaría `DiagramRuntimeEnhancements` como mecanismo de descubrimiento por reflexión y los filtros globales de `Display`.\n\nLa alternativa conservadora es una integración explícita:\n\n- `BdDiagramDialog` crea y posee un pequeño `DiagramSessionController`;\n- el controlador recibe referencias/callbacks tipados para documento, canvas, plan, resultado, shell y refresco;\n- `DiagramCommandStack`, búsqueda, inspector y exportación se conectan desde los puntos normales de construcción de la UI;\n- el canvas expone APIs pequeñas como `revealNode`, `revealColumn`, `revealRelation`, `revealGroup` y `revealRow`;\n- los atajos se registran solo para el shell de BD Diagram y se liberan al cerrarlo;\n- cada ventana mantiene su propia sesión, historial y diagnóstico.\n\nNo haría un refactor masivo de `BdDiagramDialog`. Se añadiría una interfaz de host estrecha y se movería únicamente la nueva coordinación. Esto mantiene el refactor leve acordado, pero elimina dependencias de nombres privados, búsquedas recursivas por el árbol SWT y fallos silenciosos.\n\nLos cambios del modelo llamarán explícitamente a un método como `executeCommand(command, RefreshScope)`. Los cambios visuales seguirán usando un `markDirtyNonUndoable()` separado.\n\n**Dificultad:** media.  \n**Impacto:** crítico para estabilidad, rendimiento y mantenibilidad."
+          "text": "Añadiría un botón independiente **Exportar DDL…** junto a las acciones de fichero. Generará el SQL desde el `SchemaModel` actual mediante `SchemaDdlCodec`; no reutilizará sin más el texto importado originalmente.\n\nOfrecerá dos ámbitos dentro del mismo flujo:\n\n- **Esquema interno completo** —predeterminado—: todas las tablas, vistas, columnas, claves y relaciones conocidas;\n- **Recorrido visible**: objetos usados por las instancias visibles, incluyendo automáticamente las dependencias necesarias para que PK/FK sean coherentes.\n\nLa salida incluirá:\n\n- `CREATE TABLE` y `CREATE VIEW` cuando exista definición ejecutable;\n- PK, UNIQUE y FK en orden estable;\n- relaciones lógicas y metadatos que Oracle no puede representar dentro del bloque `BDDIAGRAM_METADATA_V1`;\n- comentarios claros para nodos SQL personalizados o definiciones que no puedan convertirse en DDL ejecutable;\n- UTF-8, escritura temporal y reemplazo atómico mediante un `Job` cancelable.\n\nLa exportación solo crea un fichero `.sql`; nunca lo ejecuta. Tras completarse, se registrará automáticamente en **Explorador BD Diagram > Exportaciones**.\n\n**Dificultad:** media.  \n**Impacto:** alto; permite recuperar y versionar la definición actual del documento."
         }
       ],
       "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "inspector-sql-contextual",
-      "title": "3. Hacer que el Inspector SQL sea exacto por ejecución y nodo",
+      "id": "persistencia-y-ddl-origen",
+      "title": "6. Evitar que el DDL original se confunda con el esquema actual",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Mantendría la vista visual y RAW de DBMS_XPLAN —la prueba real confirma que funciona—, pero cambiaría cómo se recogen y relacionan las sentencias.\n\nCrearía un `ExecutionTrace` por ejecución y un `QueryTrace` por sentencia con:\n\n- `executionId`, consulta guardada y conexión utilizada;\n- `nodeId`, tabla física, nodo padre y relación que originó la consulta;\n- SQL y bindings tipados;\n- batch actual y número total de batches;\n- claves recibidas y claves propagadas;\n- filas leídas y filas finalmente utilizadas;\n- límite y timeout efectivos;\n- tiempo JDBC completo, estado, truncamiento y error.\n\nLa instrumentación se haría en los puntos de consulta de `ExplorationExecutor`, donde sí se conoce el contexto, en vez de intentar deducir el nodo buscando el nombre de tabla dentro de un historial JDBC global. El wrapper JDBC puede mantenerse únicamente como cronómetro de bajo nivel si aporta valor, pero asociado al trace activo.\n\nLa UI mostrará solo la ejecución de la ventana actual y tendrá:\n\n- **Copiar SQL**;\n- **Copiar SQL con valores**, usando un render seguro solo para depuración;\n- resumen de batches, límites, claves y relación padre;\n- selector de sentencia cuando un nodo requiera varios batches;\n- estado claro de ejecución en curso/error/cancelada.\n\nPara Explain Plan añadiría timeout, cancelación, token de solicitud para impedir que un resultado antiguo se muestre sobre otra sentencia y rollback/limpieza garantizados. La pestaña indicará claramente que es un plan **estimado**, no estadísticas reales de `DISPLAY_CURSOR`.\n\n**Dificultad:** media.  \n**Impacto:** alto; evita diagnósticos técnicamente correctos pero atribuidos al nodo equivocado."
+          "text": "Mantendría por compatibilidad el DDL de procedencia, pero dejaría de tratarlo como representación actual después de editar el esquema.\n\nEl `.bddiagram` distinguirá:\n\n- **procedencia**: texto/ubicación desde la que se importó originalmente;\n- **snapshot estructural actual**: `SchemaModel` serializado y usado por el diagrama;\n- **DDL generado actual**: producido bajo demanda desde ese snapshot.\n\nAl guardar:\n\n- se persistirá siempre el snapshot estructural completo;\n- la huella estructural incluirá objetos, columnas, claves y relaciones actuales;\n- no se regenerará ni sobrescribirá silenciosamente el texto de procedencia;\n- los documentos antiguos se cargarán con el mismo comportamiento y adquirirán los nuevos metadatos al guardarse.\n\nComparar con Oracle y fusionar diagramas usarán el snapshot actual, no el DDL de procedencia. Los snapshots de ejecución conservarán igualmente esa estructura actual.\n\n**Dificultad:** media.  \n**Impacto:** alto en coherencia, compatibilidad y trazabilidad."
         }
       ],
       "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "exportacion-streaming-correcta",
-      "title": "4. Exportación escalable y formatos correctos",
+      "id": "integracion-ui-y-descubribilidad",
+      "title": "7. Integrar las acciones sin saturar la ventana",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Movería todas las exportaciones a un `Job` con progreso y cancelación. La salida se escribiría en streaming a un fichero temporal situado junto al destino y solo se reemplazaría el destino al completar correctamente.\n\n**CSV**\n\n- escritura fila a fila, sin construir un `StringBuilder` completo;\n- UTF-8 explícito y comportamiento documentado como CSV estándar con coma;\n- escape RFC 4180;\n- opción de compatibilidad segura con hojas de cálculo para neutralizar valores que empiezan por `=`, `+`, `-` o `@`;\n- nombres únicos para entradas del ZIP aunque dos IDs se normalicen igual.\n\n**JSON completo**\n\nUsaría un formato normalizado y no recursivo:\n\n```json\n{\n  \"nodes\": [{\"nodeId\": \"...\", \"rows\": [...]}],\n  \"links\": [{\"parentRowId\": \"...\", \"childRowId\": \"...\"}],\n  \"roots\": [\"...\"]\n}\n```\n\nAsí conserva todas las filas, ciclos y relaciones muchos-a-muchos sin duplicación exponencial. Los campos se escribirán incrementalmente.\n\n**SQL INSERT**\n\n- literales Oracle tipados para `DATE`, `TIMESTAMP`, números, texto y binarios;\n- identificadores validados/citados de forma consistente;\n- aviso o exclusión explícita para vistas y nodos que no sean insertables;\n- comentarios por nodo y orden estable;\n- valores no representables se informarán, nunca se convertirán silenciosamente con `String.valueOf`.\n\nMantendría exactamente los formatos acordados: nodo → CSV/JSON/SQL; exploración → ZIP de CSV/JSON único/SQL único. No añadiría TSV.\n\n**Dificultad:** media-alta.  \n**Impacto:** crítico para bases y resultados grandes."
+          "text": "Añadiría dos acciones reconocibles en la franja de fichero:\n\n- **Esquema interno…** con icono de tabla/esquema;\n- **Exportar DDL…** con icono de documento SQL.\n\nEl menú contextual de un nodo incluirá **Mostrar en esquema interno** y mantendrá separada **Quitar instancia del diagrama**. La eliminación estructural nunca aparecerá como un icono rápido sobre la tarjeta.\n\nLa ventana de esquema será modeless y recordará tamaño, posición, filtro y expansión. No añadirá una quinta sección permanente a la columna izquierda, porque reduciría demasiado el espacio disponible para ejecución, rutas, resultados y detalle.\n\nLos estados usarán texto más icono/color, no solo color. Los tooltips explicarán si una acción afecta al esquema, al recorrido o únicamente a la presentación.\n\n**Dificultad:** baja-media.  \n**Impacto:** alto en descubribilidad con saturación contenida."
         }
       ],
       "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "snapshot-v2-offline",
-      "title": "5. Convertir snapshots en ejecuciones realmente reabribles",
+      "id": "pruebas-y-secuencia",
+      "title": "8. Pruebas, secuencia y criterios de aceptación",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Crearía un formato `.bdsnapshot` versión 2 con un codec propio y lectura compatible del snapshot v1 de esta rama.\n\nEl snapshot guardará:\n\n- `diagram.bddiagram`;\n- resultados completos en el formato normalizado y streaming del punto anterior;\n- enlaces entre filas;\n- fecha, consulta, parámetros y límites efectivos;\n- nombre/ID lógico de la conexión, nunca contraseña;\n- estados de truncamiento, cancelación y errores;\n- fingerprint del diagrama/esquema para validar comparaciones.\n\n**Abrir snapshot** reconstruirá el diagrama y los resultados en un canvas de solo lectura, permitiendo navegar nodos, columnas, filas y relaciones sin Oracle. La tabla actual de resumen seguirá disponible, pero no será el único visor.\n\n**Comparar con ejecución actual** comprobará antes que el fingerprint y la consulta son compatibles. Si no lo son, avisará en vez de presentar todas las filas como nuevas/faltantes. La comparación seguirá usando multiconjunto de firmas para respetar duplicados y permitirá abrir las filas completas de cada diferencia.\n\nSe eliminará la duplicación actual entre `results.json` y el índice de `Properties`: el índice de comparación se generará al escribir/leer en streaming o se almacenará de forma compacta.\n\n**Dificultad:** media-alta.  \n**Impacto:** alto; completa la promesa de trabajar offline y reduce mucho el consumo de memoria."
-        }
-      ],
-      "allowOther": false,
-      "allowNote": true
-    },
-    {
-      "id": "busqueda-global-escalable",
-      "title": "6. Corregir precisión y escala del buscador global",
-      "type": "single",
-      "defaultOption": 1,
-      "options": [
-        {
-          "id": 1,
-          "recommended": true,
-          "text": "Mantendría el popup flotante de `Ctrl+F`; es más limpio que añadir otra sección vertical.\n\nCambiaría el índice y la navegación:\n\n- indexar solo nodos presentes en la exploración activa, no todas las tablas del esquema como nodos ficticios;\n- usar siempre la pareja `nodeId + rowId` para resultados;\n- identificar cada columna, FK, relación y grupo con su ID exacto;\n- construir el índice estructural una vez por versión del documento;\n- buscar filas cargadas en un `Job` cancelable y mostrar resultados progresivamente;\n- aplicar debounce y cancelar la búsqueda anterior al seguir escribiendo;\n- limitar la UI a 300 resultados, indicando el total examinado y si existe truncamiento;\n- no generar una nueva cadena searchable para cada elemento y cada pulsación.\n\nLas APIs explícitas del canvas resaltarán realmente el destino:\n\n- nodo → centrar y seleccionar;\n- columna → seleccionar nodo y resaltar columna;\n- FK/relación → resaltar la línea exacta;\n- grupo → seleccionar/centrar el grupo;\n- fila → seleccionar la fila dentro de su nodo;\n- consulta/parámetro → llevar al panel correspondiente.\n\nEl popup conservará teclado completo: flechas, Enter, Escape y `Ctrl+F`; no interferirá con la edición normal de textos.\n\n**Dificultad:** media.  \n**Impacto:** alto en diagramas grandes y en precisión de navegación."
-        }
-      ],
-      "allowOther": false,
-      "allowNote": true
-    },
-    {
-      "id": "integracion-eclipse-ligera",
-      "title": "7. Completar la integración ligera de `.bddiagram` con Eclipse",
-      "type": "single",
-      "defaultOption": 1,
-      "options": [
-        {
-          "id": 1,
-          "recommended": true,
-          "text": "Mantendría la ventana independiente, pero registraría un editor externo ligero mediante `org.eclipse.ui.editors` y una clase `IEditorLauncher`.\n\nEsto proporciona oficialmente:\n\n- aparición en **Open With**;\n- asociación por extensión;\n- doble clic desde Project/Package Explorer cuando sea la asociación elegida;\n- icono propio para el tipo de archivo;\n- apertura de la ventana modeless existente, sin crear un `EditorPart`.\n\nLa acción contextual actual puede conservarse como acceso adicional, pero compartirá un único servicio `BdDiagramOpener` con el launcher para evitar lógica duplicada. Manejará ficheros locales, recursos enlazados y errores de ubicación de forma consistente.\n\nAñadiría un icono de archivo propio en los assets del plugin y declararía correctamente esos recursos en `build.properties`.\n\nEsta solución sigue siendo la opción 2 aprobada: mejora la experiencia del workspace sin convertir la aplicación principal en una pestaña de editor.\n\n**Dificultad:** baja-media.  \n**Impacto:** medio-alto y riesgo contenido."
-        }
-      ],
-      "allowOther": false,
-      "allowNote": true
-    },
-    {
-      "id": "iconos-y-densidad-ui",
-      "title": "8. Reducir saturación y completar iconos/DPI",
-      "type": "single",
-      "defaultOption": 1,
-      "options": [
-        {
-          "id": 1,
-          "recommended": true,
-          "text": "No añadiría los tres botones de texto actuales a la barra de 18 columnas.\n\nOrganizaría las acciones así:\n\n- **Undo** y **Redo** como dos botones compactos junto a Guardar;\n- cambiar el icono de «Revertir al último guardado» a `RESTORE` para no confundirlo con Undo;\n- **Buscar** como icono compacto visible, además de `Ctrl+F`;\n- **Inspector SQL** en el menú/contexto del nodo y en un menú compacto de herramientas;\n- **Exportar / Snapshot** agrupados en ese mismo menú compacto;\n- mantener tooltips descriptivos y estado habilitado/deshabilitado.\n\nAñadiría iconos propios `REDO`, `SEARCH`, `SQL_INSPECTOR`, `EXPORT` y `SNAPSHOT` usando el render antialiasado y escalable de `BdIcons`. La acción de Eclipse y el tipo de fichero usarán assets propios del plugin.\n\nVerificación visual obligatoria:\n\n- Windows 100 %, 125 %, 150 % y 200 %;\n- tema claro y oscuro;\n- ventana en su mínimo de 960 × 620;\n- textos largos y escalado de fuente;\n- navegación por teclado y contraste.\n\n**Dificultad:** baja-media.  \n**Impacto:** medio; mejora descubribilidad sin recargar la interfaz."
-        }
-      ],
-      "allowOther": false,
-      "allowNote": true
-    },
-    {
-      "id": "pruebas-dirigidas",
-      "title": "9. Añadir pruebas específicas de las funciones nuevas",
-      "type": "single",
-      "defaultOption": 1,
-      "options": [
-        {
-          "id": 1,
-          "recommended": true,
-          "text": "No convertiría ahora todo el proyecto a JUnit/CI, respetando la decisión anterior. Sí añadiría SelfTests dirigidos porque estas 1.500 líneas nuevas no tienen cobertura propia.\n\n**`DiagramCommandStackSelfTest`**\n\n- cada comando estructural hace execute/undo/redo;\n- una operación de rama es atómica;\n- Redo se invalida tras un comando nuevo;\n- mover/redimensionar/organizar/ejecutar no crea historial;\n- Undo estructural conserva movimientos visuales posteriores;\n- cargar/revertir reinicia el contexto y guardar crea savepoint;\n- dos ventanas no comparten historial.\n\n**`ExecutionDiagnosticsSelfTest`**\n\n- asociación exacta ejecución/nodo/batch/padre;\n- bindings nulos y tipados;\n- filas, claves, límites, timeout, error y cancelación;\n- Explain disponible y no disponible;\n- carrera al cambiar de sentencia mientras llega el plan.\n\n**`DiagramExportSnapshotSelfTest`**\n\n- CSV con comillas, saltos, Unicode y fórmulas;\n- SQL con `DATE`, `TIMESTAMP`, comillas, null y binario;\n- JSON con ciclos, filas compartidas y nodos sin enlaces;\n- nombres ZIP duplicados;\n- cancelación sin fichero final corrupto;\n- snapshot v1/v2, reapertura offline y comparación incompatible.\n\n**`DiagramSearchSelfTest`**\n\n- aliases repetidos, varias instancias de la misma tabla y IDs de fila repetibles;\n- navegación exacta a columna/FK/grupo/fila;\n- truncamiento y cancelación.\n\n**Pruebas de escala**\n\n- historial estructural sin coste proporcional al `.bddiagram` completo;\n- exportación streaming de 100.000 filas con heap limitado;\n- búsqueda sobre diagrama grande sin bloquear el hilo SWT;\n- snapshot grande sin duplicar todo el resultado en memoria.\n\nAñadiría finalmente una prueba PDE manual documentada para el launcher Eclipse, shortcuts, DPI y varias ventanas.\n\n**Dificultad:** media.  \n**Impacto:** crítico como red de seguridad antes del merge."
-        }
-      ],
-      "allowOther": false,
-      "allowNote": true
-    },
-    {
-      "id": "secuencia-y-merge-gates",
-      "title": "10. Secuencia de implementación y criterios de merge",
-      "type": "single",
-      "defaultOption": 1,
-      "options": [
-        {
-          "id": 1,
-          "recommended": true,
-          "text": "Aplicaría las correcciones en commits pequeños y verificables sobre la misma rama:\n\n1. retirar filtros globales/reflexión y crear el host/controladores tipados;\n2. implementar Command Stack estructural y sus pruebas;\n3. contextualizar el Inspector SQL y endurecer Explain Plan;\n4. convertir exportaciones a streaming y corregir formatos;\n5. introducir snapshot v2 y visor offline;\n6. rehacer el índice/reveal del buscador;\n7. completar `IEditorLauncher`, iconos y compactación de toolbar;\n8. ejecutar pruebas de regresión, escala y PDE manual.\n\n**No consideraría la rama lista para merge hasta que:**\n\n- Undo/Redo no modifique posiciones, tamaños ni rutas visuales ajenas al comando;\n- no exista reflexión contra campos privados ni filtros globales de `Display`;\n- la exportación de 100.000 filas termine con heap limitado y sin bloquear SWT;\n- JSON conserve ciclos y todas las filas;\n- SQL genere literales Oracle válidos para los tipos soportados;\n- un snapshot se pueda navegar completo sin Oracle;\n- el inspector muestre exclusivamente traces de la ejecución/nodo correctos;\n- doble clic/Open With/icono funcionen en Eclipse;\n- la toolbar sea usable a 960 × 620 y en DPI 100–200 %;\n- pasen los SelfTests existentes, los nuevos y las dos pruebas Oracle;\n- `Tablas únicas` siga abriendo, guardando y ejecutando diagramas existentes.\n\n**Dificultad global:** alta pero divisible.  \n**Recomendación:** no mezclar parcialmente; completar al menos los bloqueos 1–4 y todas sus pruebas antes de reconsiderar el merge."
+          "text": "Implementaría en esta secuencia:\n\n1. índice de uso y clasificación de objetos;\n2. visor modeless del esquema interno;\n3. modo edición reutilizando el editor de importación;\n4. cálculo de delta e impacto de eliminaciones;\n5. aplicación atómica y Undo/Redo;\n6. exportación DDL actual y registro en Exportaciones;\n7. migración/compatibilidad y pruebas visuales.\n\n**SelfTests nuevos o ampliados:**\n\n- objeto visible, excluido, suprimido, fuera de recorrido y sin instancia;\n- varias instancias de una misma tabla y relaciones no utilizadas;\n- quitar instancia sin alterar `SchemaModel` ni DDL;\n- eliminar tabla/columna/FK con todas sus dependencias;\n- bloqueo de SQL personalizado ambiguo;\n- Undo/Redo atómico de una edición completa;\n- DDL completo y DDL del recorrido con dependencias;\n- round-trip: exportar DDL, reimportarlo y comparar estructura;\n- carga y guardado de `.bddiagram` antiguos;\n- esquema grande sin reconstrucciones en cada cambio visual.\n\n**La mejora se considerará terminada cuando:**\n\n- todo objeto interno pueda localizarse aunque no sea visible;\n- nunca se pueda confundir quitar una instancia con borrar estructura;\n- el análisis de impacto enumere todas las referencias afectadas;\n- no queden IDs de tabla, columna o FK colgantes tras aplicar;\n- Undo restaure esquema, exploración y configuración en un solo paso;\n- el DDL exportado refleje el esquema actual y no el original;\n- ninguna acción ejecute DDL contra Oracle;\n- Árbol de relaciones y Tablas únicas sigan abriendo y guardando documentos existentes.\n\n**Dificultad global:** alta pero divisible.  \n**Recomendación:** implementar primero visor/índice y exportación DDL; habilitar eliminación estructural solo cuando el análisis de impacto y Undo estén cubiertos por pruebas."
         }
       ],
       "allowOther": false,
