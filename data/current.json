@@ -1,357 +1,98 @@
 {
   "$schema": "./schema.json",
-  "id": "uctupus-bddiagram-descubrimiento-utilidad-workflow-casos-2026-08-25",
+  "id": "plan-viewer-skill-integracion-chatgpt-2026-08-25",
   "version": 1,
-  "title": "Cuestionario para orientar la siguiente capacidad útil de BD Diagram",
-  "description": "Antes de proponer funcionalidades quiero entender **qué trabajo repetitivo, lento o arriesgado debe resolver el plugin**. El contexto de partida es una aplicación Oracle con unas 300 tablas, una parte dinámica de casos/tareas y otra estática de procedimientos/nodos, donde cada investigación real suele necesitar solo 10–20 tablas.\n\nNo hace falta responder todo con el mismo detalle. En las listas marca lo que aplique y usa las notas para matizar. Las respuestas más valiosas serán los ejemplos de investigaciones reales y el resultado que hoy cuesta conseguir.",
+  "title": "Crear la habilidad Plan Viewer y decidir su nivel de integración con ChatGPT",
+  "description": "La recomendación es empezar con una **habilidad personal** que conserve el plan completo en la conversación, publique el JSON en el Viewer y entregue el enlace al terminar. La apertura automática del navegador y la interfaz embebida son mejoras separadas porque cambian la experiencia y la complejidad.",
   "sections": [
     {
-      "id": "trabajos-prioritarios",
-      "title": "1. ¿Qué trabajos deberían ahorrarte más tiempo?",
-      "description": "Marca como máximo los **tres** que más repites o más te frenan.",
-      "type": "multiple",
-      "options": [
-        {
-          "id": 1,
-          "text": "Investigar un caso concreto y entender rápidamente **qué le ha pasado y por qué está en su estado actual**."
-        },
-        {
-          "id": 2,
-          "text": "Detectar por qué una tarea no se creó, no avanzó, quedó bloqueada o fue asignada a quien no correspondía."
-        },
-        {
-          "id": 3,
-          "text": "Comparar el recorrido dinámico real de un caso con la definición estática esperada del procedimiento y sus nodos."
-        },
-        {
-          "id": 4,
-          "text": "Encontrar incoherencias de datos entre tablas relacionadas: huérfanos, estados incompatibles, duplicados, versiones cruzadas o relaciones ausentes."
-        },
-        {
-          "id": 5,
-          "text": "Analizar el impacto de cambiar un procedimiento, nodo, relación, estado o tabla antes de desplegar."
-        },
-        {
-          "id": 6,
-          "text": "Comparar esquemas o datos entre desarrollo, preproducción y producción para explicar diferencias de comportamiento."
-        },
-        {
-          "id": 7,
-          "text": "Preparar datos de prueba reproducibles para un caso de uso sin copiar información innecesaria de cientos de tablas."
-        },
-        {
-          "id": 8,
-          "text": "Crear evidencias comprensibles para incidencias, soporte funcional, auditoría o documentación."
-        },
-        {
-          "id": 9,
-          "text": "Construir más rápido consultas complejas sobre un subconjunto de 10–20 tablas y reutilizarlas después."
-        }
-      ],
-      "allowOther": true,
-      "allowNote": true,
-      "notePlaceholder": "¿Qué tarea repetitiva importante falta en la lista?"
-    },
-    {
-      "id": "punto-partida",
-      "title": "2. ¿Con qué dato suele comenzar una investigación?",
-      "description": "Esto determina si la capacidad debe girar alrededor de un caso, una tarea, una definición estática o una búsqueda más libre.",
-      "type": "multiple",
-      "options": [
-        {
-          "id": 1,
-          "text": "Identificador de caso."
-        },
-        {
-          "id": 2,
-          "text": "Identificador de tarea, evento, asignación o incidencia."
-        },
-        {
-          "id": 3,
-          "text": "Procedimiento, versión del procedimiento o nodo estático."
-        },
-        {
-          "id": 4,
-          "text": "Usuario, grupo, unidad o destinatario de una asignación."
-        },
-        {
-          "id": 5,
-          "text": "Estado, tipo de tarea, fecha o intervalo temporal."
-        },
-        {
-          "id": 6,
-          "text": "Mensaje de error, fragmento de log o dato funcional comunicado por soporte."
-        },
-        {
-          "id": 7,
-          "text": "Tabla/columna conocida y una consulta SQL que ya tienes medio construida."
-        },
-        {
-          "id": 8,
-          "text": "No hay un punto de partida estable; cambia mucho según la incidencia."
-        }
-      ],
-      "allowOther": true,
-      "allowNote": true
-    },
-    {
-      "id": "resultado-ideal",
-      "title": "3. ¿Qué resultado final tendría valor real?",
-      "description": "Marca los resultados que usarías de verdad, no solo los que parecen interesantes.",
-      "type": "multiple",
-      "options": [
-        {
-          "id": 1,
-          "text": "Una **línea temporal** del caso con tareas, eventos, estados, asignaciones y actores."
-        },
-        {
-          "id": 2,
-          "text": "Una comparación visual **esperado frente a ocurrido**, indicando el primer punto donde se desviaron."
-        },
-        {
-          "id": 3,
-          "text": "Una explicación trazable de por qué el caso está así, enlazada con las filas y relaciones que la justifican."
-        },
-        {
-          "id": 4,
-          "text": "Un mapa reducido automáticamente a las tablas y relaciones relevantes para ese tipo de investigación."
-        },
-        {
-          "id": 5,
-          "text": "Consultas o exploraciones reutilizables con parámetros, compartibles con el equipo."
-        },
-        {
-          "id": 6,
-          "text": "Un informe copiable/exportable para Jira, correo, soporte o documentación técnica."
-        },
-        {
-          "id": 7,
-          "text": "Un paquete de datos de prueba consistente y anonimizado para reproducir el caso."
-        },
-        {
-          "id": 8,
-          "text": "Una propuesta de comprobaciones o SQL correctivo, aunque el plugin no lo ejecute."
-        },
-        {
-          "id": 9,
-          "text": "Alertas de calidad sobre inconsistencias conocidas y reglas de negocio incumplidas."
-        }
-      ],
-      "allowOther": true,
-      "allowNote": true
-    },
-    {
-      "id": "modelo-estatico-dinamico",
-      "title": "4. Explícame la unión entre la parte estática y la dinámica",
-      "description": "Necesito saber cómo se relacionan procedimiento, versión, nodos y transiciones con caso, tarea, evento, estado y asignación. Indica también qué ocurre cuando cambia la versión de un procedimiento mientras existen casos activos.",
-      "type": "text",
-      "rows": 8,
-      "placeholder": "Ejemplo: un caso referencia la versión X del procedimiento; cada tarea referencia el nodo... Las transiciones reales quedan en... Los cambios de versión se tratan así..."
-    },
-    {
-      "id": "casos-reales",
-      "title": "5. Dame tres investigaciones reales recientes",
-      "description": "Para cada una: **pregunta inicial**, tablas que acabaste consultando, pasos manuales, tiempo aproximado, qué fue difícil y qué respuesta necesitabas entregar. No incluyas datos sensibles; bastan nombres funcionales o anonimizados.",
-      "type": "text",
-      "rows": 12,
-      "placeholder": "Caso 1: queríamos saber por qué...\nPunto de partida: ID_CASO...\nConsulté: CASO, TAREA, ASIGNACION...\nLo difícil fue...\nResultado esperado..."
-    },
-    {
-      "id": "automatizacion-escritura",
-      "title": "6. ¿Hasta dónde puede actuar el plugin sobre la base de datos?",
-      "description": "Esta decisión cambia mucho la arquitectura, la seguridad y el valor posible.",
+      "id": "habilidad-inicial",
+      "title": "1. Habilidad personal `plan-viewer`",
       "type": "single",
+      "defaultOption": 1,
       "options": [
         {
           "id": 1,
-          "text": "**Solo lectura.** Puede analizar, comparar y exportar, pero nunca generar acciones correctivas ejecutables."
-        },
-        {
-          "id": 2,
-          "text": "**Solo lectura, pero puede proponer SQL.** Genera comprobaciones o correcciones para revisar y ejecutar fuera del plugin."
-        },
-        {
-          "id": 3,
-          "text": "**Ejecución controlada.** Puede preparar cambios, mostrar vista previa, ejecutarlos en transacción y exigir confirmación antes del commit."
-        },
-        {
-          "id": 4,
-          "text": "**Depende del entorno.** Lectura estricta en producción y más automatización en desarrollo/preproducción."
+          "recommended": true,
+          "text": "Crearé una habilidad personal disponible en tus proyectos, con detección automática cuando pidas un **plan**, una **propuesta de implementación**, un **refactor importante** o varios cambios complejos. También podrás invocarla expresamente con `$plan-viewer`.\n\nLa habilidad contendrá:\n\n- `SKILL.md`: cuándo se activa y el flujo que debe seguir.\n- `references/schema.json`: contrato exacto del Viewer.\n- `references/example.json`: ejemplo válido para conservar el estilo esperado.\n- `agents/openai.yaml`: nombre y descripción visibles en la interfaz.\n\nEl flujo será:\n\n1. Preparar el plan normal y completo para la conversación.\n2. Convertirlo al esquema del Viewer sin inventar alternativas.\n3. Validar el JSON antes de publicarlo.\n4. Actualizar `data/current.json` en `ddadda69/GPT_DUDAS`, rama `main`.\n5. Responder en el chat con el plan completo y el enlace al Viewer.\n\nLa habilidad no modificará inicialmente el código ni el comportamiento del Viewer."
         }
       ],
-      "allowOther": true,
-      "allowNote": true,
-      "notePlaceholder": "Describe restricciones de permisos, auditoría o procedimientos internos."
-    },
-    {
-      "id": "reglas-negocio",
-      "title": "7. ¿Dónde viven las reglas que explican si un caso está bien?",
-      "description": "Marca todas las fuentes reales. Esto aclara si el plugin puede deducir anomalías desde la BD o necesita reglas configurables.",
-      "type": "multiple",
-      "options": [
-        {
-          "id": 1,
-          "text": "En constraints, FKs, tipos y estructuras de la propia base de datos."
-        },
-        {
-          "id": 2,
-          "text": "En la definición estática de procedimientos, nodos y transiciones."
-        },
-        {
-          "id": 3,
-          "text": "En código Java/servicios y no quedan expresadas completamente en la BD."
-        },
-        {
-          "id": 4,
-          "text": "En procedimientos, paquetes, triggers o funciones Oracle."
-        },
-        {
-          "id": 5,
-          "text": "En documentación funcional, conocimiento del equipo o reglas no formalizadas."
-        },
-        {
-          "id": 6,
-          "text": "En logs/eventos externos que el plugin no consulta actualmente."
-        },
-        {
-          "id": 7,
-          "text": "Existen consultas SQL de diagnóstico ya conocidas que podrían convertirse en reglas reutilizables."
-        }
-      ],
-      "allowOther": true,
+      "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "entornos-versiones",
-      "title": "8. Entornos, esquemas, sinónimos y versiones",
-      "description": "Marca las situaciones habituales que la solución debería soportar.",
-      "type": "multiple",
+      "id": "presentacion-final",
+      "title": "2. ¿Cómo debería mostrarse cada plan al terminar?",
+      "description": "Las dos opciones son compatibles con la misma habilidad; cambia únicamente el comportamiento de la interfaz.",
+      "type": "single",
+      "defaultOption": 1,
       "options": [
         {
           "id": 1,
-          "text": "Mismo modelo lógico con esquemas o propietarios distintos según el entorno."
+          "recommended": true,
+          "text": "**Plan completo en la conversación + enlace al Viewer.** El navegador no se abre automáticamente. Si dices «ábrelo», se abre en el navegador integrado de ChatGPT. Es la opción menos intrusiva y la respuesta sigue siendo útil aunque GitHub Pages tarde en actualizarse."
         },
         {
           "id": 2,
-          "text": "Acceso mediante sinónimos y permisos sobre tablas de otros esquemas."
-        },
-        {
-          "id": 3,
-          "text": "Versiones distintas del esquema conviviendo durante despliegues."
-        },
-        {
-          "id": 4,
-          "text": "No se puede conectar simultáneamente a producción y a otro entorno."
-        },
-        {
-          "id": 5,
-          "text": "Hay que comparar metadatos, pero no datos sensibles entre entornos."
-        },
-        {
-          "id": 6,
-          "text": "Interesa comparar también datos de configuración estática entre entornos."
-        },
-        {
-          "id": 7,
-          "text": "Los identificadores cambian entre entornos y hay que emparejar por claves funcionales."
+          "text": "**Plan completo + apertura automática del Viewer.** Al terminar, ChatGPT abre la URL en su navegador integrado. Es más directo, pero cambia el foco y puede resultar molesto cuando solo quieres leer o revisar rápidamente el plan en el chat."
         }
       ],
-      "allowOther": true,
+      "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "volumen-rendimiento",
-      "title": "9. Volumen real de una investigación",
-      "description": "Indica órdenes de magnitud: tareas/eventos por caso normal y extremo, filas de las tablas grandes, duración tolerable de una consulta y si varias personas consultarían producción a la vez.",
-      "type": "text",
-      "rows": 6,
-      "placeholder": "Caso normal: ... tareas y ... eventos. Caso extremo: ...\nTabla mayor: ... filas.\nUna investigación debería responder en menos de ...\nConcurrencia aproximada: ..."
-    },
-    {
-      "id": "seguridad-datos",
-      "title": "10. ¿Qué restricciones de seguridad y datos condicionan la utilidad?",
-      "type": "multiple",
+      "id": "nivel-integracion",
+      "title": "3. Nivel de integración para devolver tus decisiones al chat",
+      "description": "Publicar el plan en la conversación es sencillo. Lo que requiere integración adicional es enviar automáticamente al mismo chat las selecciones que hagas después dentro del Viewer.",
+      "type": "single",
+      "defaultOption": 1,
       "options": [
         {
           "id": 1,
-          "text": "Hay columnas personales o sensibles que deben ocultarse o enmascararse."
+          "recommended": true,
+          "text": "**Primera versión: habilidad + Viewer externo.** El plan y su enlace aparecen en el chat. Después de elegir opciones en el Viewer, puedes copiar su resumen o JSON y pegarlo en la conversación. No requiere servidor, API key ni cambios en el Viewer."
         },
         {
           "id": 2,
-          "text": "No se pueden exportar resultados o DDL fuera de determinados entornos."
+          "text": "**Mejora intermedia: añadir al Viewer un botón «Enviar/copiar decisiones».** Puede generar un resumen o archivo listo para devolver a ChatGPT, pero desde una página externa no puede escribir de forma fiable en esta conversación concreta sin una conexión adicional. Esta opción sí exige modificar el Viewer."
         },
         {
           "id": 3,
-          "text": "Las consultas deben quedar registradas o ser auditables."
-        },
-        {
-          "id": 4,
-          "text": "Debe existir un límite estricto de filas, tiempo y carga sobre producción."
-        },
-        {
-          "id": 5,
-          "text": "Distintos usuarios deben ver capacidades o datos diferentes según permisos."
-        },
-        {
-          "id": 6,
-          "text": "Los diagramas/consultas guardados no deben contener valores reales ni credenciales."
-        },
-        {
-          "id": 7,
-          "text": "No hay restricciones adicionales relevantes más allá de los permisos Oracle."
+          "text": "**Integración completa: plugin con MCP y UI embebida.** El Plan Viewer se mostraría dentro de la propia conversación. La interfaz podría devolver las selecciones mediante el puente de UI y generar automáticamente un mensaje de seguimiento en el mismo chat. Requiere convertir la solución en plugin, crear un servidor MCP, adaptar la interfaz y resolver su despliegue y autenticación."
         }
       ],
-      "allowOther": true,
+      "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "uso-equipo",
-      "title": "11. ¿Quién usaría o consumiría el resultado?",
-      "type": "multiple",
+      "id": "acciones-usuario",
+      "title": "4. Lo que necesitarías hacer tú",
+      "type": "single",
+      "defaultOption": 1,
       "options": [
         {
           "id": 1,
-          "text": "Principalmente yo, como herramienta técnica de exploración."
-        },
-        {
-          "id": 2,
-          "text": "Otros desarrolladores con conocimiento de SQL y del modelo."
-        },
-        {
-          "id": 3,
-          "text": "Soporte o analistas funcionales con poco SQL."
-        },
-        {
-          "id": 4,
-          "text": "Responsables de despliegue, pruebas o calidad."
-        },
-        {
-          "id": 5,
-          "text": "Personas que no usarían el plugin, pero recibirían informes o capturas."
-        },
-        {
-          "id": 6,
-          "text": "Las exploraciones, reglas o plantillas deberían versionarse en Git y compartirse."
+          "recommended": true,
+          "text": "Para la primera versión, casi nada:\n\n- Autorizar una vez la escritura en tu carpeta personal de habilidades cuando ChatGPT lo solicite.\n- Mantener conectada la cuenta de GitHub con permiso de escritura sobre `ddadda69/GPT_DUDAS`. La conexión actual corresponde a `ddadda69`; la publicación puede pedir confirmación si cambian los permisos.\n- Elegir si prefieres abrir el navegador solo cuando lo pidas o automáticamente.\n\nNo necesitas crear archivos manualmente, instalar dependencias ni proporcionar una clave de la API de OpenAI para la versión inicial."
         }
       ],
-      "allowOther": true,
+      "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "plugin-actual",
-      "title": "12. Del plugin actual: qué usarías y qué estorba",
-      "description": "Señala qué capacidades actuales imaginas usando cada semana, cuáles solo ocasionalmente y cuáles probablemente nunca. Añade los tres puntos donde todavía notas más fricción o trabajo manual.",
-      "type": "text",
-      "rows": 8,
-      "placeholder": "Semanalmente usaría...\nOcasionalmente...\nNo usaría...\nLas tres fricciones principales son..."
-    },
-    {
-      "id": "criterio-exito",
-      "title": "13. ¿Qué tendría que conseguir una nueva capacidad para justificar desarrollarla?",
-      "description": "Pon un criterio comprobable: minutos ahorrados, pasos eliminados, errores evitados, facilidad para otra persona o una investigación que hoy no puedes resolver bien.",
-      "type": "text",
-      "rows": 5,
-      "placeholder": "La consideraría útil si, partiendo de un ID de caso, en menos de ... pudiera obtener ... sin tener que ..."
+      "id": "ejecucion",
+      "title": "5. Trabajo que realizaré cuando autorices la creación",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "1. Crear la estructura oficial de la habilidad personal.\n2. Trasladar y depurar las reglas actuales de `AGENTS.md`, manteniendo el esquema canónico del Viewer.\n3. Configurar la activación automática y la invocación explícita `$plan-viewer`.\n4. Asegurar que la respuesta final sea autosuficiente: plan completo, estado de publicación y enlace.\n5. Validar la estructura y probar la generación con un caso realista sin sobrescribir contenido remoto innecesariamente.\n6. Verificar que Codex detecta la habilidad y explicarte cómo desactivarla, actualizarla o convertirla posteriormente en plugin.\n\n**Recomendación:** implementar ahora esta primera versión y dejar el plugin con UI embebida como una segunda fase independiente."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
     }
   ]
 }
