@@ -1,124 +1,357 @@
 {
   "$schema": "./schema.json",
-  "id": "uctupus-bddiagram-layout-adaptativo-alta-ramificacion-2026-08-24",
+  "id": "uctupus-bddiagram-descubrimiento-utilidad-workflow-casos-2026-08-25",
   "version": 1,
-  "title": "Propuesta para compactar diagramas con muchos hijos y varias raíces",
-  "description": "El problema procede de tres decisiones del algoritmo actual: el radial obliga a todos los hijos directos a compartir un único anillo; las orientaciones vertical y horizontal colocan todos los hermanos en una única fila o columna; y los componentes de varias raíces se empaquetan solo de izquierda a derecha. Por tanto, el tamaño crece de forma casi lineal con el número de hijos o raíces.\n\nLa propuesta recomendada conserva las tres orientaciones y su significado, pero limita su dimensión dominante mediante **anillos múltiples**, **filas/columnas adaptativas** y **empaquetado bidimensional de raíces**. La reorganización se calculará al pulsar Organizar y no cambiará posteriormente al redimensionar la ventana, ejecutar consultas o variar el contenido de las tablas.",
+  "title": "Cuestionario para orientar la siguiente capacidad útil de BD Diagram",
+  "description": "Antes de proponer funcionalidades quiero entender **qué trabajo repetitivo, lento o arriesgado debe resolver el plugin**. El contexto de partida es una aplicación Oracle con unas 300 tablas, una parte dinámica de casos/tareas y otra estática de procedimientos/nodos, donde cada investigación real suele necesitar solo 10–20 tablas.\n\nNo hace falta responder todo con el mismo detalle. En las listas marca lo que aplique y usa las notas para matizar. Las respuestas más valiosas serán los ejemplos de investigaciones reales y el resultado que hoy cuesta conseguir.",
   "sections": [
     {
-      "id": "estrategia-layout",
-      "title": "1. Elegir la estrategia de distribución",
-      "description": "Las tres opciones son viables, pero cambian de forma importante la experiencia y el alcance de la implementación.",
-      "type": "single",
-      "defaultOption": 1,
+      "id": "trabajos-prioritarios",
+      "title": "1. ¿Qué trabajos deberían ahorrarte más tiempo?",
+      "description": "Marca como máximo los **tres** que más repites o más te frenan.",
+      "type": "multiple",
       "options": [
         {
           "id": 1,
-          "recommended": true,
-          "text": "**Opción recomendada: mejorar cada orientación con un layout adaptativo.**\n\n- **Radial:** repartir los hijos entre varios anillos en lugar de inflar uno solo.\n- **Vertical:** empaquetar los hijos en varias filas equilibradas.\n- **Horizontal:** aplicar el mismo criterio transpuesto, usando varias columnas.\n- **Varias raíces:** distribuir sus componentes en una cuadrícula compacta, no en una fila infinita.\n\nConserva los modos que ya conoce el usuario, no oculta nodos y puede incorporarse dentro de `DiagramAutoLayout` sin introducir una biblioteca gráfica externa. También permite respetar posiciones fijadas, grupos, orden manual y Guardar/Guardar como.\n\n**Dificultad:** media-alta.  \n**Riesgo:** contenido porque el motor es puro, independiente de SWT y ya tiene SelfTests.  \n**Resultado esperado:** mejora clara en los casos habituales y muy buena en alta ramificación."
+          "text": "Investigar un caso concreto y entender rápidamente **qué le ha pasado y por qué está en su estado actual**."
         },
         {
           "id": 2,
-          "text": "**Alternativa: sustituir las tres orientaciones por un motor jerárquico por capas.**\n\nUsar un algoritmo tipo Sugiyama: asignación de niveles, ordenación para reducir cruces, compactación de coordenadas y rutas ortogonales. Las distintas raíces se conectarían internamente a una raíz virtual invisible.\n\nProduce resultados compactos y predecibles con grafos grandes, pero el modo radial dejaría de ser realmente radial, cambiaría mucho la apariencia de diagramas existentes y exigiría revisar el trazado de relaciones, grupos y posiciones fijadas.\n\n**Dificultad:** alta.  \n**Riesgo:** alto por ser una sustitución global.  \n**Cuándo elegirla:** si se prefiere una única distribución técnica y uniforme frente a conservar las tres vistas actuales."
+          "text": "Detectar por qué una tarea no se creó, no avanzó, quedó bloqueada o fue asignada a quien no correspondía."
         },
         {
           "id": 3,
-          "text": "**Alternativa para diagramas extremos: agrupación y despliegue progresivo.**\n\nCuando un nodo supere un umbral, mostrar grupos plegables como `Hijos 1–12`, `Hijos 13–24` o agrupaciones por relación/esquema, expandibles bajo demanda. Reduce drásticamente el lienzo y el coste de pintado, pero deja de mostrar simultáneamente toda la estructura y añade un concepto nuevo a exportaciones, snapshots, búsqueda y selección de ramas.\n\n**Dificultad:** alta.  \n**Riesgo:** medio-alto por el cambio de interacción.  \n**Cuándo elegirla:** como complemento posterior para cientos o miles de hijos, no como corrección principal del caso mostrado."
+          "text": "Comparar el recorrido dinámico real de un caso con la definición estática esperada del procedimiento y sus nodos."
+        },
+        {
+          "id": 4,
+          "text": "Encontrar incoherencias de datos entre tablas relacionadas: huérfanos, estados incompatibles, duplicados, versiones cruzadas o relaciones ausentes."
+        },
+        {
+          "id": 5,
+          "text": "Analizar el impacto de cambiar un procedimiento, nodo, relación, estado o tabla antes de desplegar."
+        },
+        {
+          "id": 6,
+          "text": "Comparar esquemas o datos entre desarrollo, preproducción y producción para explicar diferencias de comportamiento."
+        },
+        {
+          "id": 7,
+          "text": "Preparar datos de prueba reproducibles para un caso de uso sin copiar información innecesaria de cientos de tablas."
+        },
+        {
+          "id": 8,
+          "text": "Crear evidencias comprensibles para incidencias, soporte funcional, auditoría o documentación."
+        },
+        {
+          "id": 9,
+          "text": "Construir más rápido consultas complejas sobre un subconjunto de 10–20 tablas y reutilizarlas después."
         }
       ],
-      "allowOther": false,
+      "allowOther": true,
       "allowNote": true,
-      "notePlaceholder": "Indica si quieres conservar las tres orientaciones o prefieres un único layout jerárquico…"
+      "notePlaceholder": "¿Qué tarea repetitiva importante falta en la lista?"
     },
     {
-      "id": "radial-multianillo",
-      "title": "2. Convertir el radial en una estrella de varios anillos",
-      "type": "single",
-      "defaultOption": 1,
+      "id": "punto-partida",
+      "title": "2. ¿Con qué dato suele comenzar una investigación?",
+      "description": "Esto determina si la capacidad debe girar alrededor de un caso, una tarea, una definición estática o una búsqueda más libre.",
+      "type": "multiple",
       "options": [
         {
           "id": 1,
-          "recommended": true,
-          "text": "Eliminaría la regla actual que incrementa un radio común hasta que todos los hijos caben en una sola circunferencia. En su lugar:\n\n1. calcularía el espacio tangencial real de cada tarjeta según su ancho, alto y separación configurada;\n2. probaría capacidades de varios anillos y elegiría la combinación que minimice el diámetro total y el espacio vacío;\n3. repartiría las ramas grandes primero y mantendría un orden angular determinista basado en `nodeOrder`;\n4. reservaría a cada rama un sector para que sus descendientes crezcan hacia fuera sin invadir las ramas vecinas;\n5. permitiría radios distintos por anillo y por sector, evitando que una tarjeta excepcionalmente ancha aleje a todas las demás.\n\nLos enlaces de los hijos directos seguirán saliendo del centro. Si dos anillos ocupan ángulos cercanos, el orden se alternará para evitar que una línea atraviese otra tarjeta. Los descendientes conservarán el abanico local de su padre.\n\nCon pocos hijos se mantendrá un solo anillo, de modo que los diagramas pequeños no cambiarán innecesariamente.\n\n**Mejora adicional de rendimiento:** sustituir los intentos de colisión globales y repetidos por un índice espacial por celdas; el coste dejará de acercarse a una comparación cuadrática en estrellas densas."
+          "text": "Identificador de caso."
+        },
+        {
+          "id": 2,
+          "text": "Identificador de tarea, evento, asignación o incidencia."
+        },
+        {
+          "id": 3,
+          "text": "Procedimiento, versión del procedimiento o nodo estático."
+        },
+        {
+          "id": 4,
+          "text": "Usuario, grupo, unidad o destinatario de una asignación."
+        },
+        {
+          "id": 5,
+          "text": "Estado, tipo de tarea, fecha o intervalo temporal."
+        },
+        {
+          "id": 6,
+          "text": "Mensaje de error, fragmento de log o dato funcional comunicado por soporte."
+        },
+        {
+          "id": 7,
+          "text": "Tabla/columna conocida y una consulta SQL que ya tienes medio construida."
+        },
+        {
+          "id": 8,
+          "text": "No hay un punto de partida estable; cambia mucho según la incidencia."
         }
       ],
-      "allowOther": false,
+      "allowOther": true,
       "allowNote": true
     },
     {
-      "id": "vertical-horizontal-wrap",
-      "title": "3. Partir filas y columnas de hijos de forma adaptativa",
-      "type": "single",
-      "defaultOption": 1,
+      "id": "resultado-ideal",
+      "title": "3. ¿Qué resultado final tendría valor real?",
+      "description": "Marca los resultados que usarías de verdad, no solo los que parecen interesantes.",
+      "type": "multiple",
       "options": [
         {
           "id": 1,
-          "recommended": true,
-          "text": "En orientación vertical, cada subárbol hijo se medirá como una pieza rectangular y se empaquetará en varias filas debajo del padre. En horizontal se aplicará exactamente el mismo algoritmo transpuesto, formando varias columnas a la derecha.\n\nLa anchura objetivo no será un número fijo: se calculará con el área total de los subárboles, la proporción del área visible y un límite razonable de hermanos por banda. Se evaluarán varias particiones y se escogerá la que minimice:\n\n- dimensión máxima;\n- espacio vacío;\n- desviación respecto a la proporción de la ventana;\n- longitud total de los enlaces;\n- cruces y cambios innecesarios del orden de los hijos.\n\nEl padre quedará centrado respecto al conjunto de hijos. Para muchas filas, las relaciones usarán un pequeño tramo común o **bus** por nivel antes de ramificarse, evitando un abanico de diagonales que atraviese tarjetas.\n\nLa ventana solo influirá cuando el usuario pulse **Organizar**. Después, las coordenadas quedan fijadas hasta la siguiente reorganización o movimiento manual; cambiar de monitor o ejecutar consultas no provocará saltos."
+          "text": "Una **línea temporal** del caso con tareas, eventos, estados, asignaciones y actores."
+        },
+        {
+          "id": 2,
+          "text": "Una comparación visual **esperado frente a ocurrido**, indicando el primer punto donde se desviaron."
+        },
+        {
+          "id": 3,
+          "text": "Una explicación trazable de por qué el caso está así, enlazada con las filas y relaciones que la justifican."
+        },
+        {
+          "id": 4,
+          "text": "Un mapa reducido automáticamente a las tablas y relaciones relevantes para ese tipo de investigación."
+        },
+        {
+          "id": 5,
+          "text": "Consultas o exploraciones reutilizables con parámetros, compartibles con el equipo."
+        },
+        {
+          "id": 6,
+          "text": "Un informe copiable/exportable para Jira, correo, soporte o documentación técnica."
+        },
+        {
+          "id": 7,
+          "text": "Un paquete de datos de prueba consistente y anonimizado para reproducir el caso."
+        },
+        {
+          "id": 8,
+          "text": "Una propuesta de comprobaciones o SQL correctivo, aunque el plugin no lo ejecute."
+        },
+        {
+          "id": 9,
+          "text": "Alertas de calidad sobre inconsistencias conocidas y reglas de negocio incumplidas."
         }
       ],
-      "allowOther": false,
+      "allowOther": true,
       "allowNote": true
     },
     {
-      "id": "empaquetado-raices",
-      "title": "4. Empaquetar varias raíces en dos dimensiones",
+      "id": "modelo-estatico-dinamico",
+      "title": "4. Explícame la unión entre la parte estática y la dinámica",
+      "description": "Necesito saber cómo se relacionan procedimiento, versión, nodos y transiciones con caso, tarea, evento, estado y asignación. Indica también qué ocurre cuando cambia la versión de un procedimiento mientras existen casos activos.",
+      "type": "text",
+      "rows": 8,
+      "placeholder": "Ejemplo: un caso referencia la versión X del procedimiento; cada tarea referencia el nodo... Las transiciones reales quedan en... Los cambios de versión se tratan así..."
+    },
+    {
+      "id": "casos-reales",
+      "title": "5. Dame tres investigaciones reales recientes",
+      "description": "Para cada una: **pregunta inicial**, tablas que acabaste consultando, pasos manuales, tiempo aproximado, qué fue difícil y qué respuesta necesitabas entregar. No incluyas datos sensibles; bastan nombres funcionales o anonimizados.",
+      "type": "text",
+      "rows": 12,
+      "placeholder": "Caso 1: queríamos saber por qué...\nPunto de partida: ID_CASO...\nConsulté: CASO, TAREA, ASIGNACION...\nLo difícil fue...\nResultado esperado..."
+    },
+    {
+      "id": "automatizacion-escritura",
+      "title": "6. ¿Hasta dónde puede actuar el plugin sobre la base de datos?",
+      "description": "Esta decisión cambia mucho la arquitectura, la seguridad y el valor posible.",
       "type": "single",
-      "defaultOption": 1,
       "options": [
         {
           "id": 1,
-          "recommended": true,
-          "text": "Cada raíz y todos sus descendientes se organizarán primero como un componente independiente. Después, sus rectángulos se colocarán mediante un empaquetador **shelf/skyline** en varias filas o columnas, buscando una proporción cercana al área visible.\n\nEl empaquetado será estable: conservará el orden de las raíces como criterio principal y solo usará el tamaño para decidir saltos de banda. Así, pulsar Organizar dos veces con los mismos datos producirá exactamente las mismas posiciones.\n\nLos grupos se tratarán como contenedores indivisibles y los componentes con nodos fijados no se recolocarán automáticamente. Las raíces no se conectarán entre sí ni se creará ninguna relación ficticia visible.\n\nEsto corrige directamente el comportamiento actual, donde `arrangeRadial` y el layout jerárquico incrementan solo `nextX` o el desplazamiento horizontal y convierten cualquier conjunto de raíces en una tira muy larga."
+          "text": "**Solo lectura.** Puede analizar, comparar y exportar, pero nunca generar acciones correctivas ejecutables."
+        },
+        {
+          "id": 2,
+          "text": "**Solo lectura, pero puede proponer SQL.** Genera comprobaciones o correcciones para revisar y ejecutar fuera del plugin."
+        },
+        {
+          "id": 3,
+          "text": "**Ejecución controlada.** Puede preparar cambios, mostrar vista previa, ejecutarlos en transacción y exigir confirmación antes del commit."
+        },
+        {
+          "id": 4,
+          "text": "**Depende del entorno.** Lectura estricta en producción y más automatización en desarrollo/preproducción."
         }
       ],
-      "allowOther": false,
+      "allowOther": true,
+      "allowNote": true,
+      "notePlaceholder": "Describe restricciones de permisos, auditoría o procedimientos internos."
+    },
+    {
+      "id": "reglas-negocio",
+      "title": "7. ¿Dónde viven las reglas que explican si un caso está bien?",
+      "description": "Marca todas las fuentes reales. Esto aclara si el plugin puede deducir anomalías desde la BD o necesita reglas configurables.",
+      "type": "multiple",
+      "options": [
+        {
+          "id": 1,
+          "text": "En constraints, FKs, tipos y estructuras de la propia base de datos."
+        },
+        {
+          "id": 2,
+          "text": "En la definición estática de procedimientos, nodos y transiciones."
+        },
+        {
+          "id": 3,
+          "text": "En código Java/servicios y no quedan expresadas completamente en la BD."
+        },
+        {
+          "id": 4,
+          "text": "En procedimientos, paquetes, triggers o funciones Oracle."
+        },
+        {
+          "id": 5,
+          "text": "En documentación funcional, conocimiento del equipo o reglas no formalizadas."
+        },
+        {
+          "id": 6,
+          "text": "En logs/eventos externos que el plugin no consulta actualmente."
+        },
+        {
+          "id": 7,
+          "text": "Existen consultas SQL de diagnóstico ya conocidas que podrían convertirse en reglas reutilizables."
+        }
+      ],
+      "allowOther": true,
       "allowNote": true
     },
     {
-      "id": "controles-y-compatibilidad",
-      "title": "5. Integrarlo sin saturar la interfaz ni alterar diagramas guardados",
-      "type": "single",
-      "defaultOption": 1,
+      "id": "entornos-versiones",
+      "title": "8. Entornos, esquemas, sinónimos y versiones",
+      "description": "Marca las situaciones habituales que la solución debería soportar.",
+      "type": "multiple",
       "options": [
         {
           "id": 1,
-          "recommended": true,
-          "text": "No añadiría nuevos botones permanentes. El botón existente **Organizar** aplicará el modo adaptativo según la orientación seleccionada. En sus opciones avanzadas bastaría con:\n\n- **Ajustar al área visible**: activado por defecto;\n- **Distribución fija**: permite indicar manualmente hijos por fila/anillo solo cuando se necesite;\n- **Compacta / Equilibrada / Espaciada**: tres niveles que reutilizan la separación existente y no incorporan otro control numérico en la barra.\n\nLa apertura de un `.bddiagram` existente no reorganizará nada. Sus coordenadas seguirán siendo válidas y el nuevo algoritmo solo actuará al pulsar Organizar. Mover, redimensionar y fijar nodos conservará su comportamiento actual; Guardar y Guardar como persistirán las proporciones y posiciones finales, no reglas dependientes del monitor.\n\nLos cambios de layout continuarán siendo solo de presentación y no entrarán en el Undo/Redo estructural."
+          "text": "Mismo modelo lógico con esquemas o propietarios distintos según el entorno."
+        },
+        {
+          "id": 2,
+          "text": "Acceso mediante sinónimos y permisos sobre tablas de otros esquemas."
+        },
+        {
+          "id": 3,
+          "text": "Versiones distintas del esquema conviviendo durante despliegues."
+        },
+        {
+          "id": 4,
+          "text": "No se puede conectar simultáneamente a producción y a otro entorno."
+        },
+        {
+          "id": 5,
+          "text": "Hay que comparar metadatos, pero no datos sensibles entre entornos."
+        },
+        {
+          "id": 6,
+          "text": "Interesa comparar también datos de configuración estática entre entornos."
+        },
+        {
+          "id": 7,
+          "text": "Los identificadores cambian entre entornos y hay que emparejar por claves funcionales."
         }
       ],
-      "allowOther": false,
+      "allowOther": true,
       "allowNote": true
     },
     {
-      "id": "rendimiento-estabilidad",
-      "title": "6. Mantener fluidez, estabilidad y calidad visual",
-      "type": "single",
-      "defaultOption": 1,
+      "id": "volumen-rendimiento",
+      "title": "9. Volumen real de una investigación",
+      "description": "Indica órdenes de magnitud: tareas/eventos por caso normal y extremo, filas de las tablas grandes, duración tolerable de una consulta y si varias personas consultarían producción a la vez.",
+      "type": "text",
+      "rows": 6,
+      "placeholder": "Caso normal: ... tareas y ... eventos. Caso extremo: ...\nTabla mayor: ... filas.\nUna investigación debería responder en menos de ...\nConcurrencia aproximada: ..."
+    },
+    {
+      "id": "seguridad-datos",
+      "title": "10. ¿Qué restricciones de seguridad y datos condicionan la utilidad?",
+      "type": "multiple",
       "options": [
         {
           "id": 1,
-          "recommended": true,
-          "text": "El cálculo seguirá dentro de `DiagramAutoLayout`, sin SWT, y devolverá un resultado inmutable que el lienzo aplicará de una vez. Para que no haya tirones:\n\n- precalcular tamaños y contornos una sola vez por reorganización;\n- usar índice espacial para colisiones y empaquetado, evitando bucles globales repetidos;\n- mantener orden y desempates deterministas;\n- ejecutar el cálculo en segundo plano cuando el diagrama supere un umbral, con cancelación si se vuelve a organizar;\n- repintar una sola vez al aplicar el resultado;\n- no recalcular al hacer zoom, pan, mover la ventana o recibir resultados SQL.\n\nLos enlaces deberán evitar las tarjetas, y cuando haya muchas ramas podrán compartir tramos ortogonales sin cambiar qué nodos relacionan. Los nodos fijados y los movimientos manuales tendrán prioridad absoluta sobre el auto-layout."
+          "text": "Hay columnas personales o sensibles que deben ocultarse o enmascararse."
+        },
+        {
+          "id": 2,
+          "text": "No se pueden exportar resultados o DDL fuera de determinados entornos."
+        },
+        {
+          "id": 3,
+          "text": "Las consultas deben quedar registradas o ser auditables."
+        },
+        {
+          "id": 4,
+          "text": "Debe existir un límite estricto de filas, tiempo y carga sobre producción."
+        },
+        {
+          "id": 5,
+          "text": "Distintos usuarios deben ver capacidades o datos diferentes según permisos."
+        },
+        {
+          "id": 6,
+          "text": "Los diagramas/consultas guardados no deben contener valores reales ni credenciales."
+        },
+        {
+          "id": 7,
+          "text": "No hay restricciones adicionales relevantes más allá de los permisos Oracle."
         }
       ],
-      "allowOther": false,
+      "allowOther": true,
       "allowNote": true
     },
     {
-      "id": "pruebas-aceptacion",
-      "title": "7. Pruebas y criterios de aceptación",
-      "type": "single",
-      "defaultOption": 1,
+      "id": "uso-equipo",
+      "title": "11. ¿Quién usaría o consumiría el resultado?",
+      "type": "multiple",
       "options": [
         {
           "id": 1,
-          "recommended": true,
-          "text": "Ampliaría `DiagramAutoLayoutSelfTest` con casos generados y deterministas:\n\n- radial con 8, 20, 40 y 80 hijos directos;\n- tarjetas con anchos y altos muy distintos;\n- ramas profundas mezcladas con hojas;\n- vertical y horizontal con 30 hermanos y subárboles desiguales;\n- 2, 5, 12 y 30 raíces independientes;\n- grupos, nodos fijados, orden manual y ciclos malformados;\n- reorganización repetida para comprobar estabilidad exacta;\n- lienzo pequeño, pantalla ampliada y distintas proporciones de ventana.\n\n**Criterios de aceptación:**\n\n1. ningún par de tarjetas se solapa;\n2. ningún enlace atraviesa una tarjeta ajena cuando use rutas automáticas;\n3. 20 o más hijos directos generan varios anillos o bandas, no un único radio/fila creciente;\n4. varias raíces ocupan al menos dos bandas cuando con ello se reduce la dimensión máxima;\n5. en los escenarios densos, la dimensión máxima se reduce al menos un 35 % frente al algoritmo actual sin aumentar cruces;\n6. 500 nodos se calculan en menos de 250 ms en la prueba headless de referencia y 5.000 en menos de 2 s;\n7. mismo documento, tamaños y preferencias producen las mismas coordenadas;\n8. abrir, ejecutar consultas, hacer zoom o cambiar de monitor no reorganiza el diagrama;\n9. los `.bddiagram` existentes conservan su presentación hasta que el usuario pulse Organizar.\n\n**Secuencia recomendada:** crear primero las métricas y el empaquetador 2D; aplicar después el salto de bandas en vertical/horizontal; implementar el radial multianillo; integrar rutas y opciones; finalizar con pruebas de rendimiento y regresión visual."
+          "text": "Principalmente yo, como herramienta técnica de exploración."
+        },
+        {
+          "id": 2,
+          "text": "Otros desarrolladores con conocimiento de SQL y del modelo."
+        },
+        {
+          "id": 3,
+          "text": "Soporte o analistas funcionales con poco SQL."
+        },
+        {
+          "id": 4,
+          "text": "Responsables de despliegue, pruebas o calidad."
+        },
+        {
+          "id": 5,
+          "text": "Personas que no usarían el plugin, pero recibirían informes o capturas."
+        },
+        {
+          "id": 6,
+          "text": "Las exploraciones, reglas o plantillas deberían versionarse en Git y compartirse."
         }
       ],
-      "allowOther": false,
+      "allowOther": true,
       "allowNote": true
+    },
+    {
+      "id": "plugin-actual",
+      "title": "12. Del plugin actual: qué usarías y qué estorba",
+      "description": "Señala qué capacidades actuales imaginas usando cada semana, cuáles solo ocasionalmente y cuáles probablemente nunca. Añade los tres puntos donde todavía notas más fricción o trabajo manual.",
+      "type": "text",
+      "rows": 8,
+      "placeholder": "Semanalmente usaría...\nOcasionalmente...\nNo usaría...\nLas tres fricciones principales son..."
+    },
+    {
+      "id": "criterio-exito",
+      "title": "13. ¿Qué tendría que conseguir una nueva capacidad para justificar desarrollarla?",
+      "description": "Pon un criterio comprobable: minutos ahorrados, pasos eliminados, errores evitados, facilidad para otra persona o una investigación que hoy no puedes resolver bien.",
+      "type": "text",
+      "rows": 5,
+      "placeholder": "La consideraría útil si, partiendo de un ID de caso, en menos de ... pudiera obtener ... sin tener que ..."
     }
   ]
 }
