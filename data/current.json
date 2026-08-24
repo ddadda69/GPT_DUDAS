@@ -1,126 +1,120 @@
 {
   "$schema": "./schema.json",
-  "id": "uctupus-bddiagram-esquema-interno-editor-ddl-2026-08-24",
+  "id": "uctupus-bddiagram-layout-adaptativo-alta-ramificacion-2026-08-24",
   "version": 1,
-  "title": "Plan para auditar, editar y exportar el esquema interno de un `.bddiagram`",
-  "description": "El objetivo es que un `.bddiagram` deje de mezclar tres conceptos distintos y que el usuario pueda saber siempre qué está modificando:\n\n1. **Esquema interno:** tablas, vistas, columnas, PK, UNIQUE, FK y relaciones lógicas conocidas por el documento.\n2. **Exploración:** raíces, instancias, ramas, consultas, parámetros, límites y qué parte del esquema se recorre.\n3. **Presentación:** posiciones, tamaños, grupos, zoom, columnas mostradas y organización visual.\n\nLas operaciones visuales y de recorrido no modificarán el esquema interno. Eliminar estructura solo será posible desde una acción explícita de edición del esquema, con análisis de impacto previo. Ninguna operación ejecutará DDL contra Oracle.\n\n**Principios de seguridad**\n\n- **Quitar nodo/rama** significa retirarlo de la exploración, no borrar su tabla.\n- **Eliminar del esquema interno** será una acción distinta, claramente destructiva y deshará dependencias de forma atómica.\n- La exportación DDL se generará desde el modelo interno actual, no copiando ciegamente el DDL original.\n- Todos los cambios estructurales entrarán como un único comando en Undo/Redo.\n- **Árbol de relaciones** seguirá siendo el flujo principal; **Tablas únicas** conservará compatibilidad.",
+  "title": "Propuesta para compactar diagramas con muchos hijos y varias raíces",
+  "description": "El problema procede de tres decisiones del algoritmo actual: el radial obliga a todos los hijos directos a compartir un único anillo; las orientaciones vertical y horizontal colocan todos los hermanos en una única fila o columna; y los componentes de varias raíces se empaquetan solo de izquierda a derecha. Por tanto, el tamaño crece de forma casi lineal con el número de hijos o raíces.\n\nLa propuesta recomendada conserva las tres orientaciones y su significado, pero limita su dimensión dominante mediante **anillos múltiples**, **filas/columnas adaptativas** y **empaquetado bidimensional de raíces**. La reorganización se calculará al pulsar Organizar y no cambiará posteriormente al redimensionar la ventana, ejecutar consultas o variar el contenido de las tablas.",
   "sections": [
     {
-      "id": "capas-e-invariantes",
-      "title": "1. Formalizar las tres capas y sus invariantes",
+      "id": "estrategia-layout",
+      "title": "1. Elegir la estrategia de distribución",
+      "description": "Las tres opciones son viables, pero cambian de forma importante la experiencia y el alcance de la implementación.",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Introduciría una separación explícita entre **esquema**, **exploración** y **presentación**, sin reescribir todo el modelo.\n\nAñadiría un servicio `SchemaObjectUsageIndex` que, para cada tabla, vista, columna y relación, calcule:\n\n- instancias visibles en el lienzo;\n- instancias existentes pero excluidas;\n- nodos suprimidos que pueden restaurarse;\n- pertenencia o no al recorrido activo;\n- consultas, parámetros, ordenaciones y columnas visibles que lo referencian;\n- relaciones FK usadas por rutas y relaciones internas no utilizadas;\n- origen importado, lógico o personalizado.\n\nEl índice será derivado y reconstruible; no duplicará información dentro del `.bddiagram`. Se invalidará únicamente con cambios estructurales o de exploración, nunca al mover nodos, ejecutar consultas o cambiar zoom.\n\n**Invariantes:**\n\n- una instancia visible siempre referencia un objeto válido del esquema o una definición personalizada válida;\n- eliminar una instancia no elimina el objeto estructural;\n- ninguna referencia a columna/FK puede quedar colgante después de aplicar una edición de esquema;\n- el esquema interno es la fuente autoritativa para exportar DDL.\n\n**Dificultad:** media.  \n**Impacto:** alto; proporciona la base para auditar y editar sin ambigüedad."
-        }
-      ],
-      "allowOther": false,
-      "allowNote": true
-    },
-    {
-      "id": "visor-esquema-interno",
-      "title": "2. Añadir un visor explícito del esquema interno",
-      "type": "single",
-      "defaultOption": 1,
-      "options": [
+          "text": "**Opción recomendada: mejorar cada orientación con un layout adaptativo.**\n\n- **Radial:** repartir los hijos entre varios anillos en lugar de inflar uno solo.\n- **Vertical:** empaquetar los hijos en varias filas equilibradas.\n- **Horizontal:** aplicar el mismo criterio transpuesto, usando varias columnas.\n- **Varias raíces:** distribuir sus componentes en una cuadrícula compacta, no en una fila infinita.\n\nConserva los modos que ya conoce el usuario, no oculta nodos y puede incorporarse dentro de `DiagramAutoLayout` sin introducir una biblioteca gráfica externa. También permite respetar posiciones fijadas, grupos, orden manual y Guardar/Guardar como.\n\n**Dificultad:** media-alta.  \n**Riesgo:** contenido porque el motor es puro, independiente de SWT y ya tiene SelfTests.  \n**Resultado esperado:** mejora clara en los casos habituales y muy buena en alta ramificación."
+        },
         {
-          "id": 1,
-          "recommended": true,
-          "text": "Añadiría una acción visible **Esquema interno…** en la ventana del diagrama. Abrirá una ventana modeless amplia, reutilizando el árbol estructural del importador pero orientada a auditoría.\n\nEl árbol mostrará todas las tablas y vistas internas, aunque no tengan ningún nodo visible. Cada objeto tendrá un estado inequívoco:\n\n- **Visible**: tiene una o varias instancias en el lienzo;\n- **Fuera del recorrido**: existe en el esquema pero la consulta activa no lo alcanza;\n- **Excluido**: existe una instancia desactivada;\n- **Suprimido**: se retiró del diagrama y puede restaurarse;\n- **Sin instancia**: está importado pero nunca se añadió al lienzo;\n- **Personalizado**: procede de SQL o de una definición manual;\n- **Relación no usada**: existe en el esquema, pero ninguna ruta del diagrama la utiliza.\n\nIncluirá filtros por estado, búsqueda por tabla/columna/FK y contadores como `2 instancias · 1 consulta · 3 parámetros`. Desde cada objeto se podrá:\n\n- centrar una instancia visible;\n- añadir una instancia al diagrama;\n- restaurar una instancia suprimida;\n- abrir sus dependencias;\n- iniciar la edición estructural;\n- exportar el DDL del objeto.\n\nLa sección actual **Fuera del recorrido** seguirá existiendo como acceso rápido, pero el nuevo visor será el inventario completo y fiable.\n\n**Dificultad:** media.  \n**Impacto:** muy alto en comprensión y mantenimiento de diagramas existentes."
-        }
-      ],
-      "allowOther": false,
-      "allowNote": true
-    },
-    {
-      "id": "editor-esquema-reutilizado",
-      "title": "3. Reutilizar el editor de importación para editar un `.bddiagram` existente",
-      "type": "single",
-      "defaultOption": 1,
-      "options": [
+          "id": 2,
+          "text": "**Alternativa: sustituir las tres orientaciones por un motor jerárquico por capas.**\n\nUsar un algoritmo tipo Sugiyama: asignación de niveles, ordenación para reducir cruces, compactación de coordenadas y rutas ortogonales. Las distintas raíces se conectarían internamente a una raíz virtual invisible.\n\nProduce resultados compactos y predecibles con grafos grandes, pero el modo radial dejaría de ser realmente radial, cambiaría mucho la apariencia de diagramas existentes y exigiría revisar el trazado de relaciones, grupos y posiciones fijadas.\n\n**Dificultad:** alta.  \n**Riesgo:** alto por ser una sustitución global.  \n**Cuándo elegirla:** si se prefiere una única distribución técnica y uniforme frente a conservar las tres vistas actuales."
+        },
         {
-          "id": 1,
-          "recommended": true,
-          "text": "La acción **Editar esquema interno…** abrirá el mismo editor estructural usado durante la importación, pero en modo edición de documento.\n\nTrabajará sobre una copia profunda del esquema actual y permitirá:\n\n- añadir, renombrar o eliminar tablas y vistas;\n- añadir, editar o eliminar columnas;\n- modificar PK y claves únicas;\n- crear, editar o eliminar FK y relaciones lógicas;\n- incorporar objetos desde otro DDL o desde Oracle;\n- revisar objetos personalizados y sus columnas conocidas.\n\nNo reutilizará el paso del importador que crea raíces y rutas nuevas. Al pulsar **Aplicar**, se calculará un `SchemaEditDelta` entre el esquema original y el editado. Ese delta se validará antes de modificar el documento y se aplicará como un único comando estructural de Undo/Redo.\n\nCancelar cerrará el editor sin cambiar el `.bddiagram`. Aplicar nunca ejecutará `CREATE`, `ALTER` ni `DROP` en Oracle.\n\n**Dificultad:** media-alta.  \n**Impacto:** alto; evita mantener dos editores estructurales diferentes."
-        }
-      ],
-      "allowOther": false,
-      "allowNote": true
-    },
-    {
-      "id": "impacto-eliminaciones",
-      "title": "4. Diferenciar quitar del diagrama de eliminar del esquema",
-      "type": "single",
-      "defaultOption": 1,
-      "options": [
-        {
-          "id": 1,
-          "recommended": true,
-          "text": "Las acciones y textos distinguirán claramente dos operaciones:\n\n### Quitar nodo o rama del diagrama\n\n- elimina únicamente esa instancia o recorrido;\n- conserva tabla, columnas, PK y FK en el esquema interno;\n- permite volver a añadir o restaurar el objeto;\n- no afecta otras instancias de la misma tabla;\n- no modifica el DDL exportado del esquema completo.\n\n### Eliminar del esquema interno\n\nSolo estará disponible dentro del editor estructural y abrirá una pantalla de impacto antes de habilitar **Aplicar**. Mostrará exactamente:\n\n- nodos e instancias que desaparecerán;\n- ramas que dependen de una FK eliminada;\n- consultas y parámetros afectados;\n- columnas visibles, filtros, `ORDER BY` y límites que perderían referencias;\n- relaciones manuales y vínculos de parámetros invalidados;\n- grupos visuales que quedarían vacíos;\n- objetos personalizados cuyo SQL no pueda repararse automáticamente.\n\nReglas de cascada:\n\n- eliminar una tabla/vista elimina todas sus instancias y relaciones estructurales;\n- eliminar una columna elimina o invalida PK, UNIQUE y mapeos FK que la usan;\n- eliminar una FK elimina las rutas basadas en ella, pero no las tablas de sus extremos;\n- las dependencias reparables se actualizan; las ambiguas bloquean la aplicación y exigen decisión explícita;\n- toda la operación se deshace de una vez con Undo.\n\nLos menús usarán nombres completos —**Quitar instancia del diagrama** y **Eliminar tabla del esquema interno**— para impedir confusiones.\n\n**Dificultad:** alta.  \n**Impacto:** crítico para evitar pérdida accidental de configuración."
+          "id": 3,
+          "text": "**Alternativa para diagramas extremos: agrupación y despliegue progresivo.**\n\nCuando un nodo supere un umbral, mostrar grupos plegables como `Hijos 1–12`, `Hijos 13–24` o agrupaciones por relación/esquema, expandibles bajo demanda. Reduce drásticamente el lienzo y el coste de pintado, pero deja de mostrar simultáneamente toda la estructura y añade un concepto nuevo a exportaciones, snapshots, búsqueda y selección de ramas.\n\n**Dificultad:** alta.  \n**Riesgo:** medio-alto por el cambio de interacción.  \n**Cuándo elegirla:** como complemento posterior para cientos o miles de hijos, no como corrección principal del caso mostrado."
         }
       ],
       "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Matiza qué dependencias deberían bloquear o permitir una eliminación…"
+      "notePlaceholder": "Indica si quieres conservar las tres orientaciones o prefieres un único layout jerárquico…"
     },
     {
-      "id": "exportar-ddl-actual",
-      "title": "5. Exportar el DDL real del esquema interno",
+      "id": "radial-multianillo",
+      "title": "2. Convertir el radial en una estrella de varios anillos",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Añadiría un botón independiente **Exportar DDL…** junto a las acciones de fichero. Generará el SQL desde el `SchemaModel` actual mediante `SchemaDdlCodec`; no reutilizará sin más el texto importado originalmente.\n\nOfrecerá dos ámbitos dentro del mismo flujo:\n\n- **Esquema interno completo** —predeterminado—: todas las tablas, vistas, columnas, claves y relaciones conocidas;\n- **Recorrido visible**: objetos usados por las instancias visibles, incluyendo automáticamente las dependencias necesarias para que PK/FK sean coherentes.\n\nLa salida incluirá:\n\n- `CREATE TABLE` y `CREATE VIEW` cuando exista definición ejecutable;\n- PK, UNIQUE y FK en orden estable;\n- relaciones lógicas y metadatos que Oracle no puede representar dentro del bloque `BDDIAGRAM_METADATA_V1`;\n- comentarios claros para nodos SQL personalizados o definiciones que no puedan convertirse en DDL ejecutable;\n- UTF-8, escritura temporal y reemplazo atómico mediante un `Job` cancelable.\n\nLa exportación solo crea un fichero `.sql`; nunca lo ejecuta. Tras completarse, se registrará automáticamente en **Explorador BD Diagram > Exportaciones**.\n\n**Dificultad:** media.  \n**Impacto:** alto; permite recuperar y versionar la definición actual del documento."
+          "text": "Eliminaría la regla actual que incrementa un radio común hasta que todos los hijos caben en una sola circunferencia. En su lugar:\n\n1. calcularía el espacio tangencial real de cada tarjeta según su ancho, alto y separación configurada;\n2. probaría capacidades de varios anillos y elegiría la combinación que minimice el diámetro total y el espacio vacío;\n3. repartiría las ramas grandes primero y mantendría un orden angular determinista basado en `nodeOrder`;\n4. reservaría a cada rama un sector para que sus descendientes crezcan hacia fuera sin invadir las ramas vecinas;\n5. permitiría radios distintos por anillo y por sector, evitando que una tarjeta excepcionalmente ancha aleje a todas las demás.\n\nLos enlaces de los hijos directos seguirán saliendo del centro. Si dos anillos ocupan ángulos cercanos, el orden se alternará para evitar que una línea atraviese otra tarjeta. Los descendientes conservarán el abanico local de su padre.\n\nCon pocos hijos se mantendrá un solo anillo, de modo que los diagramas pequeños no cambiarán innecesariamente.\n\n**Mejora adicional de rendimiento:** sustituir los intentos de colisión globales y repetidos por un índice espacial por celdas; el coste dejará de acercarse a una comparación cuadrática en estrellas densas."
         }
       ],
       "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "persistencia-y-ddl-origen",
-      "title": "6. Evitar que el DDL original se confunda con el esquema actual",
+      "id": "vertical-horizontal-wrap",
+      "title": "3. Partir filas y columnas de hijos de forma adaptativa",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Mantendría por compatibilidad el DDL de procedencia, pero dejaría de tratarlo como representación actual después de editar el esquema.\n\nEl `.bddiagram` distinguirá:\n\n- **procedencia**: texto/ubicación desde la que se importó originalmente;\n- **snapshot estructural actual**: `SchemaModel` serializado y usado por el diagrama;\n- **DDL generado actual**: producido bajo demanda desde ese snapshot.\n\nAl guardar:\n\n- se persistirá siempre el snapshot estructural completo;\n- la huella estructural incluirá objetos, columnas, claves y relaciones actuales;\n- no se regenerará ni sobrescribirá silenciosamente el texto de procedencia;\n- los documentos antiguos se cargarán con el mismo comportamiento y adquirirán los nuevos metadatos al guardarse.\n\nComparar con Oracle y fusionar diagramas usarán el snapshot actual, no el DDL de procedencia. Los snapshots de ejecución conservarán igualmente esa estructura actual.\n\n**Dificultad:** media.  \n**Impacto:** alto en coherencia, compatibilidad y trazabilidad."
+          "text": "En orientación vertical, cada subárbol hijo se medirá como una pieza rectangular y se empaquetará en varias filas debajo del padre. En horizontal se aplicará exactamente el mismo algoritmo transpuesto, formando varias columnas a la derecha.\n\nLa anchura objetivo no será un número fijo: se calculará con el área total de los subárboles, la proporción del área visible y un límite razonable de hermanos por banda. Se evaluarán varias particiones y se escogerá la que minimice:\n\n- dimensión máxima;\n- espacio vacío;\n- desviación respecto a la proporción de la ventana;\n- longitud total de los enlaces;\n- cruces y cambios innecesarios del orden de los hijos.\n\nEl padre quedará centrado respecto al conjunto de hijos. Para muchas filas, las relaciones usarán un pequeño tramo común o **bus** por nivel antes de ramificarse, evitando un abanico de diagonales que atraviese tarjetas.\n\nLa ventana solo influirá cuando el usuario pulse **Organizar**. Después, las coordenadas quedan fijadas hasta la siguiente reorganización o movimiento manual; cambiar de monitor o ejecutar consultas no provocará saltos."
         }
       ],
       "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "integracion-ui-y-descubribilidad",
-      "title": "7. Integrar las acciones sin saturar la ventana",
+      "id": "empaquetado-raices",
+      "title": "4. Empaquetar varias raíces en dos dimensiones",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Añadiría dos acciones reconocibles en la franja de fichero:\n\n- **Esquema interno…** con icono de tabla/esquema;\n- **Exportar DDL…** con icono de documento SQL.\n\nEl menú contextual de un nodo incluirá **Mostrar en esquema interno** y mantendrá separada **Quitar instancia del diagrama**. La eliminación estructural nunca aparecerá como un icono rápido sobre la tarjeta.\n\nLa ventana de esquema será modeless y recordará tamaño, posición, filtro y expansión. No añadirá una quinta sección permanente a la columna izquierda, porque reduciría demasiado el espacio disponible para ejecución, rutas, resultados y detalle.\n\nLos estados usarán texto más icono/color, no solo color. Los tooltips explicarán si una acción afecta al esquema, al recorrido o únicamente a la presentación.\n\n**Dificultad:** baja-media.  \n**Impacto:** alto en descubribilidad con saturación contenida."
+          "text": "Cada raíz y todos sus descendientes se organizarán primero como un componente independiente. Después, sus rectángulos se colocarán mediante un empaquetador **shelf/skyline** en varias filas o columnas, buscando una proporción cercana al área visible.\n\nEl empaquetado será estable: conservará el orden de las raíces como criterio principal y solo usará el tamaño para decidir saltos de banda. Así, pulsar Organizar dos veces con los mismos datos producirá exactamente las mismas posiciones.\n\nLos grupos se tratarán como contenedores indivisibles y los componentes con nodos fijados no se recolocarán automáticamente. Las raíces no se conectarán entre sí ni se creará ninguna relación ficticia visible.\n\nEsto corrige directamente el comportamiento actual, donde `arrangeRadial` y el layout jerárquico incrementan solo `nextX` o el desplazamiento horizontal y convierten cualquier conjunto de raíces en una tira muy larga."
         }
       ],
       "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "pruebas-y-secuencia",
-      "title": "8. Pruebas, secuencia y criterios de aceptación",
+      "id": "controles-y-compatibilidad",
+      "title": "5. Integrarlo sin saturar la interfaz ni alterar diagramas guardados",
       "type": "single",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Implementaría en esta secuencia:\n\n1. índice de uso y clasificación de objetos;\n2. visor modeless del esquema interno;\n3. modo edición reutilizando el editor de importación;\n4. cálculo de delta e impacto de eliminaciones;\n5. aplicación atómica y Undo/Redo;\n6. exportación DDL actual y registro en Exportaciones;\n7. migración/compatibilidad y pruebas visuales.\n\n**SelfTests nuevos o ampliados:**\n\n- objeto visible, excluido, suprimido, fuera de recorrido y sin instancia;\n- varias instancias de una misma tabla y relaciones no utilizadas;\n- quitar instancia sin alterar `SchemaModel` ni DDL;\n- eliminar tabla/columna/FK con todas sus dependencias;\n- bloqueo de SQL personalizado ambiguo;\n- Undo/Redo atómico de una edición completa;\n- DDL completo y DDL del recorrido con dependencias;\n- round-trip: exportar DDL, reimportarlo y comparar estructura;\n- carga y guardado de `.bddiagram` antiguos;\n- esquema grande sin reconstrucciones en cada cambio visual.\n\n**La mejora se considerará terminada cuando:**\n\n- todo objeto interno pueda localizarse aunque no sea visible;\n- nunca se pueda confundir quitar una instancia con borrar estructura;\n- el análisis de impacto enumere todas las referencias afectadas;\n- no queden IDs de tabla, columna o FK colgantes tras aplicar;\n- Undo restaure esquema, exploración y configuración en un solo paso;\n- el DDL exportado refleje el esquema actual y no el original;\n- ninguna acción ejecute DDL contra Oracle;\n- Árbol de relaciones y Tablas únicas sigan abriendo y guardando documentos existentes.\n\n**Dificultad global:** alta pero divisible.  \n**Recomendación:** implementar primero visor/índice y exportación DDL; habilitar eliminación estructural solo cuando el análisis de impacto y Undo estén cubiertos por pruebas."
+          "text": "No añadiría nuevos botones permanentes. El botón existente **Organizar** aplicará el modo adaptativo según la orientación seleccionada. En sus opciones avanzadas bastaría con:\n\n- **Ajustar al área visible**: activado por defecto;\n- **Distribución fija**: permite indicar manualmente hijos por fila/anillo solo cuando se necesite;\n- **Compacta / Equilibrada / Espaciada**: tres niveles que reutilizan la separación existente y no incorporan otro control numérico en la barra.\n\nLa apertura de un `.bddiagram` existente no reorganizará nada. Sus coordenadas seguirán siendo válidas y el nuevo algoritmo solo actuará al pulsar Organizar. Mover, redimensionar y fijar nodos conservará su comportamiento actual; Guardar y Guardar como persistirán las proporciones y posiciones finales, no reglas dependientes del monitor.\n\nLos cambios de layout continuarán siendo solo de presentación y no entrarán en el Undo/Redo estructural."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "rendimiento-estabilidad",
+      "title": "6. Mantener fluidez, estabilidad y calidad visual",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "El cálculo seguirá dentro de `DiagramAutoLayout`, sin SWT, y devolverá un resultado inmutable que el lienzo aplicará de una vez. Para que no haya tirones:\n\n- precalcular tamaños y contornos una sola vez por reorganización;\n- usar índice espacial para colisiones y empaquetado, evitando bucles globales repetidos;\n- mantener orden y desempates deterministas;\n- ejecutar el cálculo en segundo plano cuando el diagrama supere un umbral, con cancelación si se vuelve a organizar;\n- repintar una sola vez al aplicar el resultado;\n- no recalcular al hacer zoom, pan, mover la ventana o recibir resultados SQL.\n\nLos enlaces deberán evitar las tarjetas, y cuando haya muchas ramas podrán compartir tramos ortogonales sin cambiar qué nodos relacionan. Los nodos fijados y los movimientos manuales tendrán prioridad absoluta sobre el auto-layout."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "pruebas-aceptacion",
+      "title": "7. Pruebas y criterios de aceptación",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Ampliaría `DiagramAutoLayoutSelfTest` con casos generados y deterministas:\n\n- radial con 8, 20, 40 y 80 hijos directos;\n- tarjetas con anchos y altos muy distintos;\n- ramas profundas mezcladas con hojas;\n- vertical y horizontal con 30 hermanos y subárboles desiguales;\n- 2, 5, 12 y 30 raíces independientes;\n- grupos, nodos fijados, orden manual y ciclos malformados;\n- reorganización repetida para comprobar estabilidad exacta;\n- lienzo pequeño, pantalla ampliada y distintas proporciones de ventana.\n\n**Criterios de aceptación:**\n\n1. ningún par de tarjetas se solapa;\n2. ningún enlace atraviesa una tarjeta ajena cuando use rutas automáticas;\n3. 20 o más hijos directos generan varios anillos o bandas, no un único radio/fila creciente;\n4. varias raíces ocupan al menos dos bandas cuando con ello se reduce la dimensión máxima;\n5. en los escenarios densos, la dimensión máxima se reduce al menos un 35 % frente al algoritmo actual sin aumentar cruces;\n6. 500 nodos se calculan en menos de 250 ms en la prueba headless de referencia y 5.000 en menos de 2 s;\n7. mismo documento, tamaños y preferencias producen las mismas coordenadas;\n8. abrir, ejecutar consultas, hacer zoom o cambiar de monitor no reorganiza el diagrama;\n9. los `.bddiagram` existentes conservan su presentación hasta que el usuario pulse Organizar.\n\n**Secuencia recomendada:** crear primero las métricas y el empaquetador 2D; aplicar después el salto de bandas en vertical/horizontal; implementar el radial multianillo; integrar rutas y opciones; finalizar con pruebas de rendimiento y regresión visual."
         }
       ],
       "allowOther": false,
