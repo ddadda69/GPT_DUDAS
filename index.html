@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src https://api.github.com; img-src 'self' https: data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Plan Viewer</title>
+  <link rel="stylesheet" href="app/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.14/dist/purify.min.js" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@18.0.11/lib/marked.umd.js" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Plan Viewer</div>
+    <div id="status" class="status" aria-live="polite">Cargando…</div>
+    <button id="reload" class="btn" type="button">Recargar</button>
+    <a id="openJson" class="btn link-btn" href="https://github.com/ddadda69/GPT_DUDAS/blob/main/data/current.json" target="_blank" rel="noopener noreferrer">Ver JSON</a>
+  </header>
+
+  <main id="app" class="app">
+    <section class="loading-card">Cargando el plan…</section>
+  </main>
+
+  <script type="module" src="app/viewer.js"></script>
+</body>
+</html>
