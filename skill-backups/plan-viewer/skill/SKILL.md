@@ -1,157 +1,95 @@
 ---
 name: plan-viewer
-description: "Crea planes, propuestas de implementación y refactors complejos, entrega el contenido completo en el chat y publica una copia interactiva compatible con GPT_DUDAS Plan Viewer. Usar cuando el usuario pida un plan, una propuesta de implementación, un refactor importante o varios cambios complejos; no usar para listas breves, informes de estado ni tareas simples que deban ejecutarse directamente."
+description: "Crea planes, propuestas de implementación y refactors complejos, entrega siempre el contenido completo en el chat y publica una copia interactiva segura en GPT_DUDAS Plan Viewer. Usar cuando el usuario pida un plan, una propuesta de implementación, un refactor importante o varios cambios complejos; no usar para tareas simples, listas breves ni informes de estado."
 ---
 
 # Plan Viewer
 
-Redacta primero la respuesta que sería más útil en el chat. Después adapta ese
-mismo contenido al Viewer. El Viewer debe adaptarse a la respuesta normal, no la
-respuesta al Viewer.
+Redacta primero la respuesta que sería más útil en la conversación. Después adapta ese mismo contenido al Viewer. El Viewer se adapta al plan normal; nunca recortes ni deformes el plan para hacerlo interactivo.
 
 ## Fuentes canónicas
 
 - Repositorio: `ddadda69/GPT_DUDAS`.
-- Rama de publicación: `main`.
-- Esquema remoto autoritativo: `data/schema.json`.
-- Publicación canónica: `data/plans/<id>.json`.
-- URL estable de un plan: `https://ddadda69.github.io/GPT_DUDAS/?plan=<id>`.
-- Espejo de conveniencia: `data/current.json`. La URL sin `?plan=` carga este
-  archivo y debe mostrar normalmente el último plan publicado correctamente.
+- Rama: `main`.
+- Esquema autoritativo: `data/schema.json`.
+- Ejemplo: `data/example.json`.
+- Plan canónico: `data/plans/<id>.json`.
+- URL estable: `https://ddadda69.github.io/GPT_DUDAS/?plan=<id>`.
+- Último plan: `data/current.json`; la URL raíz lo muestra sin parámetros.
 
-Antes de generar el JSON, lee por completo
-[`references/schema.json`](references/schema.json). Lee también
-[`references/example.json`](references/example.json) cuando necesites comprobar
-el estilo o la estructura de una propuesta.
+Antes de generar JSON, lee por completo `references/schema.json`. Usa `references/example.json` como ejemplo local. Cuando GitHub esté disponible, lee siempre el esquema remoto de `main` antes de publicar; el remoto es la autoridad.
 
-Cuando GitHub esté disponible, consulta siempre `data/schema.json` en `main`
-antes de publicar. Consulta también `data/example.json` si necesitas referencia
-de estructura. La copia remota del esquema es la autoridad. Si el esquema remoto
-ha cambiado de manera que la habilidad no pueda validarlo con seguridad, no
-publiques y explica que la habilidad debe actualizarse.
+## Contrato actual
 
-## Identidad de cada plan
+No mantengas formatos antiguos. El contrato actual solo admite secciones `type: "single"`.
 
-Cada plan vive de forma canónica en su propio archivo. `data/current.json` es
-solo un espejo compartido para abrir el último plan sin parámetros; nunca se usa
-para decidir qué plan existente debe actualizarse.
+Cada sección:
 
-El `id`:
+- tiene `id`, `title`, `type`, `options` y `defaultOption`;
+- contiene **una o dos opciones como máximo**;
+- numera las opciones exactamente como `1` y, si existe, `2`;
+- tiene exactamente una opción `recommended: true`, que debe coincidir con `defaultOption`;
+- usa una segunda opción únicamente si existe una alternativa real que cambie de forma relevante la implementación;
+- puede usar `allowOther: true` si tiene sentido que el usuario redacte una alternativa completa;
+- muestra Nota salvo que `allowNote` sea `false`.
 
-- debe ser estable durante toda la vida del plan;
-- debe coincidir exactamente con el nombre `data/plans/<id>.json`;
-- debe cumplir `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`;
-- para un plan nuevo, genera un valor suficientemente único, preferiblemente
-  `<slug-tema>-YYYYMMDD-HHMMSS-<sufijo-corto>`;
-- antes de crear un plan nuevo, comprueba que `data/plans/<id>.json` no existe;
-  si existe, genera otro `id`, nunca lo reemplaces;
-- para continuar un plan existente, usa únicamente un `id` fiable ya presente
-  en la conversación, en la URL previamente publicada o indicado por el usuario;
-  no adivines el plan mirando `data/current.json` ni buscando títulos parecidos.
+El Viewer añade por interfaz **No implementar**, **Editar** y **Nota**; no los representes como opciones JSON.
 
-Si no puedes determinar con seguridad qué plan se está actualizando, crea un
-plan nuevo en lugar de correr el riesgo de sobrescribir otro.
+## Identidad y versiones
 
-## Versiones
+El `id` del plan:
 
-- Un plan nuevo empieza en `version: 1`.
-- Para actualizar un plan existente, lee primero su JSON remoto, comprueba que el
-  `id` interno coincide con el nombre solicitado y toma su `version` actual.
-- La nueva versión debe ser exactamente `version remota + 1`.
-- Nunca reduzcas, reutilices ni saltes una versión para ocultar un conflicto.
+- es estable durante toda la vida del plan;
+- coincide exactamente con `data/plans/<id>.json`;
+- cumple `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`;
+- para un plan nuevo debe ser suficientemente único, preferiblemente `<slug-tema>-YYYYMMDD-HHMMSS-<sufijo-corto>`;
+- nunca se deduce mirando `data/current.json` ni buscando títulos parecidos.
 
-## Flujo
+Un plan nuevo empieza en `version: 1`. Para actualizar uno existente, lee su archivo canónico, verifica el `id` y usa exactamente `version remota + 1`.
 
-1. Antes de preparar el plan, cuando GitHub esté disponible, lee
-   `data/current.json` y conserva su SHA como `currentBaselineSha`. Esta lectura
-   es el bloqueo optimista del espejo: no vuelvas a sustituir ese SHA por otro
-   justo antes de escribir `current.json`.
-2. Investiga el contexto necesario y redacta el plan completo como lo entregarías
-   normalmente en la conversación.
-3. Convierte el contenido al esquema del Viewer sin recortarlo ni inventar
-   decisiones.
-4. Determina si es un plan nuevo o una actualización:
-   - nuevo: genera `id`, confirma que `data/plans/<id>.json` no existe y usa
-     `version: 1`;
-   - existente: lee exactamente `data/plans/<id>.json`, verifica su `id`, conserva
-     ese `id` y usa `version remota + 1`.
-5. Usa en `$schema` preferentemente la URL absoluta
-   `https://ddadda69.github.io/GPT_DUDAS/data/schema.json`, para que el JSON sea
-   portable aunque esté dentro de `data/plans/`.
-6. Guarda el borrador JSON en una ubicación temporal y ejecútalo contra
-   `scripts/validate_plan.py`. Si conoces el `id`, usa también
-   `--expected-id <id>`. Usa el Python disponible en el entorno.
-7. Si Python no está disponible, valida manualmente antes de publicar, como
-   mínimo: campos obligatorios, propiedades permitidas, tipos, `id` y patrón,
-   `version >= 1`, secciones no vacías, IDs de opciones, defaults existentes,
-   coincidencia exacta entre `<id>.json` y el `id` interno y todas las reglas del
-   esquema remoto.
-8. Antes de escribir el archivo canónico en GitHub:
-   - verifica que la cuenta autenticada sea exactamente `ddadda69`;
-   - para un plan nuevo confirma de nuevo que el archivo no existe;
-   - para una actualización vuelve a leer exactamente el archivo objetivo y usa
-     el SHA recibido en esa lectura.
-9. Publica primero y únicamente la versión canónica del plan:
-   - nuevo: crea `data/plans/<id>.json`; la operación debe fallar si ya existe;
-   - existente: reemplaza `data/plans/<id>.json` usando exactamente el SHA leído;
-   - no fuerces ningún SHA ni hagas overwrite ciego.
-10. Vuelve a leer `data/plans/<id>.json` y verifica `id`, `version`, título,
-    número de secciones y que el contenido remoto corresponda a la versión recién
-    publicada. Si esta verificación falla, no actualices `current.json`.
-11. Tras verificar la publicación canónica, intenta reflejar exactamente ese
-    mismo JSON en `data/current.json` usando `currentBaselineSha`:
-    - no vuelvas a leer `current.json` para obtener un SHA más nuevo antes de esta
-      escritura, porque eso ocultaría una actualización concurrente;
-    - si el SHA sigue vigente, reemplaza `data/current.json` con el mismo JSON;
-    - si GitHub rechaza la escritura porque `current.json` cambió desde la lectura
-      inicial, no fuerces ni reintentes el overwrite: conserva el otro `current` y
-      considera la publicación del plan igualmente correcta;
-    - después de una escritura correcta, vuelve a leer `data/current.json` y
-      comprueba que `id`, `version` y contenido coincidan con el plan publicado.
-12. Responde con el plan completo y autosuficiente. Indica por separado si la
-    publicación canónica se verificó y si `current.json` quedó actualizado. Termina
-    con la URL estable `https://ddadda69.github.io/GPT_DUDAS/?plan=<id>`; puedes
-    mencionar también que la URL raíz mostrará ese plan si el espejo se actualizó.
+## Flujo de publicación
+
+1. Si GitHub está disponible, lee `data/current.json` **antes de preparar el plan** y conserva su SHA como `currentBaselineSha`.
+2. Investiga lo necesario y redacta el plan completo para la conversación.
+3. Convierte exactamente ese contenido al esquema actual, sin inventar alternativas.
+4. Decide si es nuevo o continuación de un plan identificado con certeza.
+5. Usa preferentemente `$schema: "https://ddadda69.github.io/GPT_DUDAS/data/schema.json"`.
+6. Valida el JSON con `scripts/validate_plan.py --expected-id <id> --require-canonical-schema` cuando haya Python disponible.
+7. Si no hay Python, valida manualmente todos los requisitos del esquema remoto y además:
+   - una o dos opciones por sección;
+   - IDs de opción consecutivos desde 1;
+   - IDs de sección únicos;
+   - `recommended: true` único y coincidente con `defaultOption`;
+   - nombre `<id>.json` idéntico al `id` interno.
+8. Antes de cualquier escritura verifica que la cuenta autenticada sea exactamente `ddadda69`.
+9. Publica primero el archivo canónico:
+   - plan nuevo: confirma inmediatamente antes que `data/plans/<id>.json` no existe y créalo; si ya existe, genera otro `id`;
+   - plan existente: vuelve a leer exactamente `data/plans/<id>.json` y actualízalo usando el SHA recibido;
+   - nunca fuerces un conflicto ni hagas overwrite ciego.
+10. Vuelve a leer el archivo canónico y verifica `id`, `version`, título, número de secciones, contenido y SHA.
+11. Solo después intenta copiar exactamente el mismo JSON a `data/current.json` usando `currentBaselineSha`:
+    - no sustituyas el baseline por un SHA más nuevo justo antes de escribir;
+    - si otro chat modificó `current.json`, no fuerces ni reintentes el overwrite;
+    - un conflicto en `current.json` no invalida la publicación canónica del plan.
+12. Si el espejo se actualizó, vuelve a leer `data/current.json` y verifica que coincide con el plan canónico.
+13. Entrega en el chat el plan completo, indica por separado el estado del archivo canónico y de `current.json`, y termina con la URL estable `?plan=<id>`. Si el espejo se actualizó, puedes indicar también que la URL raíz muestra ese plan.
 
 ## Reglas de adaptación
 
-- Conserva Markdown completo: párrafos, listas, tablas, negrita, `código` y
-  bloques de código.
-- No inventes alternativas para añadir interactividad.
-- Si solo propondrías una solución, crea una sección `single` con una opción
-  completa, `id: 1`, `recommended: true`, `defaultOption: 1`,
-  `allowOther: false` y `allowNote: true`.
-- Crea varias opciones únicamente cuando sean alternativas reales que cambien
-  significativamente la implementación. Cada opción debe ser comprensible y
-  completa por sí misma.
-- Usa secciones `multiple`, `text` o `boolean` solo cuando representen de forma
-  natural la decisión o la información solicitada.
-- No añadas al JSON controles que el Viewer incorpora automáticamente, incluidos
-  **Editar**, **No implementar** y **Nota**.
-- No fuerces el plan a tener un número fijo de secciones.
+- Conserva todo el Markdown útil: párrafos, listas, tablas, negrita, código, bloques y enlaces.
+- No inventes decisiones para añadir interactividad.
+- Si solo existe una solución razonable, usa una única opción `id: 1`, `recommended: true`, `defaultOption: 1` y normalmente `allowOther: false`.
+- Si existen dos alternativas reales, usa `id: 1` para la recomendada y `id: 2` para la alternativa, salvo que técnicamente recomiendes la segunda; `defaultOption` y `recommended` deben reflejar la recomendación real.
+- No fuerces un número fijo de secciones.
 
-## Concurrencia y varios chats
+## Concurrencia
 
-Los archivos de `data/plans/` son la verdad canónica y evitan que conversaciones
-distintas se pisen. El único conflicto crítico es que dos procesos intenten
-actualizar el mismo `id`; en ese caso el SHA del archivo del plan es el bloqueo
-optimista y el cambio remoto nunca se sobrescribe a la fuerza.
+Los archivos de `data/plans/` son la fuente de verdad y aíslan conversaciones distintas. El SHA del archivo canónico es el bloqueo optimista cuando dos procesos intentan modificar el mismo `id`.
 
-`data/current.json` es deliberadamente compartido y no canónico. En el caso
-normal, sin concurrencia, se actualiza tras cada publicación correcta y la URL
-raíz muestra el último plan. Si dos chats parten del mismo `currentBaselineSha`,
-solo uno podrá actualizar el espejo; el otro debe conservar su plan aislado y no
-pisar el `current` ajeno. Por eso, bajo concurrencia, la URL con `?plan=<id>` es
-siempre la referencia fiable.
+`data/current.json` es deliberadamente compartido y solo representa el último plan en el caso normal. Si dos publicaciones parten del mismo `currentBaselineSha`, como máximo una debe actualizar el espejo. La otra conserva intacto su archivo canónico y su URL estable.
 
-## Fallos y presentación
+## Fallos
 
-Si faltan conexión, permisos o validación, entrega igualmente el plan completo
-en el chat, pero deja claro que el Viewer no se actualizó. Si el plan aislado se
-publicó pero el espejo `current.json` tuvo un conflicto, no presentes eso como un
-fallo del plan: indica que el enlace estable funciona y que la URL raíz puede
-mostrar otro plan concurrente.
+Si faltan permisos, conexión o validación, entrega igualmente el plan completo en el chat y explica qué parte no se publicó. No enlaces al Viewer como si contuviera un plan que no está verificado.
 
-No abras el navegador automáticamente. Ábrelo únicamente si el usuario lo pide
-de forma explícita. Una solicitud de plan no autoriza cambios en el código del
-Viewer, el esquema u otros archivos del repositorio.
+No abras el navegador automáticamente. Una petición de plan autoriza únicamente la publicación de su archivo canónico y, cuando corresponda, la actualización segura de `data/current.json`; no autoriza modificar el Viewer, el esquema ni documentación.

@@ -11,19 +11,14 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT_KEYS = {"$schema", "id", "version", "title", "description", "sections"}
-BASE_SECTION_KEYS = {
-    "id", "title", "description", "type", "allowNote", "noteLabel",
-    "notePlaceholder",
+CANONICAL_SCHEMA_URL = "https://ddadda69.github.io/GPT_DUDAS/data/schema.json"
+PLAN_KEYS = {"$schema", "id", "version", "title", "description", "sections"}
+SECTION_KEYS = {
+    "id", "title", "description", "type", "options", "defaultOption",
+    "allowOther", "allowNote", "noteLabel", "notePlaceholder",
 }
-TYPE_KEYS = {
-    "single": {"options", "defaultOption", "allowOther", "defaultOther"},
-    "multiple": {"options", "defaultOptions", "allowOther", "defaultOther"},
-    "text": {"rows", "placeholder", "defaultValue"},
-    "boolean": {"default", "trueLabel", "falseLabel"},
-}
-OPTION_KEYS = {"id", "text", "recommended", "selected"}
-PLAN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+OPTION_KEYS = {"id", "text", "recommended"}
+SAFE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 class ValidationError(ValueError):
@@ -38,18 +33,15 @@ def is_integer(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def is_option_id(value: Any) -> bool:
-    return is_integer(value) or (isinstance(value, str) and bool(value))
-
-
 def require_string(
     obj: dict[str, Any], key: str, path: str, *, nonempty: bool = False
-) -> None:
+) -> str:
     value = obj.get(key)
     if not isinstance(value, str):
         fail(f"{path}.{key}", "debe ser texto")
-    if nonempty and not value:
+    if nonempty and not value.strip():
         fail(f"{path}.{key}", "no puede estar vacío")
+    return value
 
 
 def optional_string(obj: dict[str, Any], key: str, path: str) -> None:
@@ -62,108 +54,97 @@ def optional_bool(obj: dict[str, Any], key: str, path: str) -> None:
         fail(f"{path}.{key}", "debe ser booleano")
 
 
-def validate_option(option: Any, path: str) -> Any:
+def require_safe_id(value: Any, path: str) -> str:
+    if not isinstance(value, str) or not SAFE_ID_RE.fullmatch(value):
+        fail(
+            path,
+            "debe empezar por letra o número, usar solo letras, números, punto, guion o guion bajo y tener como máximo 128 caracteres",
+        )
+    return value
+
+
+def validate_option(option: Any, path: str, expected_id: int) -> bool:
     if not isinstance(option, dict):
         fail(path, "debe ser un objeto")
     extra = set(option) - OPTION_KEYS
     if extra:
         fail(path, f"campos no permitidos: {sorted(extra)}")
-    if "id" not in option or not is_option_id(option["id"]):
-        fail(f"{path}.id", "debe ser un entero o texto no vacío")
-    require_string(option, "text", path)
+
+    option_id = option.get("id")
+    if not is_integer(option_id) or option_id != expected_id:
+        fail(f"{path}.id", f"debe ser exactamente {expected_id}")
+    require_string(option, "text", path, nonempty=True)
     optional_bool(option, "recommended", path)
-    optional_bool(option, "selected", path)
-    return option["id"]
+    return option.get("recommended") is True
 
 
-def validate_section(section: Any, index: int) -> None:
+def validate_section(section: Any, index: int) -> str:
     path = f"$.sections[{index}]"
     if not isinstance(section, dict):
         fail(path, "debe ser un objeto")
-    section_type = section.get("type")
-    if section_type not in TYPE_KEYS:
-        fail(f"{path}.type", "debe ser single, multiple, text o boolean")
-    allowed = BASE_SECTION_KEYS | TYPE_KEYS[section_type]
-    extra = set(section) - allowed
+    extra = set(section) - SECTION_KEYS
     if extra:
-        fail(path, f"campos no permitidos para {section_type}: {sorted(extra)}")
+        fail(path, f"campos no permitidos: {sorted(extra)}")
 
-    require_string(section, "id", path, nonempty=True)
+    section_id = require_safe_id(section.get("id"), f"{path}.id")
     require_string(section, "title", path, nonempty=True)
     optional_string(section, "description", path)
     optional_string(section, "noteLabel", path)
     optional_string(section, "notePlaceholder", path)
+    optional_bool(section, "allowOther", path)
     optional_bool(section, "allowNote", path)
 
-    if section_type in {"single", "multiple"}:
-        options = section.get("options")
-        if not isinstance(options, list) or not options:
-            fail(f"{path}.options", "debe ser una lista no vacía")
-        option_ids = [
-            validate_option(option, f"{path}.options[{option_index}]")
-            for option_index, option in enumerate(options)
-        ]
-        optional_bool(section, "allowOther", path)
-        optional_bool(section, "defaultOther", path)
+    if section.get("type") != "single":
+        fail(f"{path}.type", "debe ser exactamente 'single'")
 
-        if section_type == "single" and "defaultOption" in section:
-            default_option = section["defaultOption"]
-            if not is_option_id(default_option):
-                fail(f"{path}.defaultOption", "debe ser un identificador válido")
-            if default_option not in option_ids:
-                fail(f"{path}.defaultOption", "no coincide con ninguna opción")
+    options = section.get("options")
+    if not isinstance(options, list) or not 1 <= len(options) <= 2:
+        fail(f"{path}.options", "debe contener una o dos opciones")
 
-        if section_type == "multiple" and "defaultOptions" in section:
-            defaults = section["defaultOptions"]
-            if not isinstance(defaults, list):
-                fail(f"{path}.defaultOptions", "debe ser una lista")
-            if any(not is_option_id(value) for value in defaults):
-                fail(f"{path}.defaultOptions", "contiene un identificador inválido")
-            typed_defaults = {(type(value).__name__, value) for value in defaults}
-            if len(typed_defaults) != len(defaults):
-                fail(f"{path}.defaultOptions", "no admite duplicados")
-            if any(value not in option_ids for value in defaults):
-                fail(f"{path}.defaultOptions", "contiene una opción inexistente")
+    recommended_ids = []
+    for option_index, option in enumerate(options, start=1):
+        if validate_option(option, f"{path}.options[{option_index - 1}]", option_index):
+            recommended_ids.append(option_index)
 
-    elif section_type == "text":
-        if "rows" in section:
-            rows = section["rows"]
-            if not is_integer(rows) or rows < 1:
-                fail(f"{path}.rows", "debe ser un entero mayor o igual que 1")
-        optional_string(section, "placeholder", path)
-        optional_string(section, "defaultValue", path)
+    default_option = section.get("defaultOption")
+    if not is_integer(default_option) or default_option not in range(1, len(options) + 1):
+        fail(f"{path}.defaultOption", "debe coincidir con una opción existente")
 
-    elif section_type == "boolean":
-        optional_bool(section, "default", path)
-        optional_string(section, "trueLabel", path)
-        optional_string(section, "falseLabel", path)
+    if recommended_ids != [default_option]:
+        fail(
+            f"{path}.options",
+            "debe existir exactamente una opción recommended=true y debe coincidir con defaultOption",
+        )
+
+    return section_id
 
 
 def validate_plan(plan: Any) -> None:
     if not isinstance(plan, dict):
         fail("$", "debe ser un objeto")
-    extra = set(plan) - ROOT_KEYS
+    extra = set(plan) - PLAN_KEYS
     if extra:
         fail("$", f"campos no permitidos: {sorted(extra)}")
-    for required in ("id", "version", "title", "sections"):
+
+    for required in ("$schema", "id", "version", "title", "sections"):
         if required not in plan:
             fail("$", f"falta el campo obligatorio {required}")
 
-    optional_string(plan, "$schema", "$")
-    require_string(plan, "id", "$", nonempty=True)
-    if not PLAN_ID_RE.fullmatch(plan["id"]):
-        fail(
-            "$.id",
-            "solo admite letras, números, punto, guion y guion bajo, debe empezar por letra o número y tener como máximo 128 caracteres",
-        )
+    require_string(plan, "$schema", "$", nonempty=True)
+    require_safe_id(plan.get("id"), "$.id")
     require_string(plan, "title", "$", nonempty=True)
     optional_string(plan, "description", "$")
+
     if not is_integer(plan["version"]) or plan["version"] < 1:
         fail("$.version", "debe ser un entero mayor o igual que 1")
-    if not isinstance(plan["sections"], list) or not plan["sections"]:
+
+    sections = plan["sections"]
+    if not isinstance(sections, list) or not sections:
         fail("$.sections", "debe ser una lista no vacía")
-    for index, section in enumerate(plan["sections"]):
-        validate_section(section, index)
+
+    section_ids = [validate_section(section, index) for index, section in enumerate(sections)]
+    if len(section_ids) != len(set(section_ids)):
+        fail("$.sections", "los id de sección deben ser únicos")
 
 
 def main() -> int:
@@ -173,16 +154,25 @@ def main() -> int:
         "--expected-id",
         help="Si se indica, exige que el id del JSON coincida exactamente con este valor",
     )
+    parser.add_argument(
+        "--require-canonical-schema",
+        action="store_true",
+        help=f"Exige $schema={CANONICAL_SCHEMA_URL}",
+    )
     args = parser.parse_args()
+
     try:
         with args.plan.open("r", encoding="utf-8-sig") as handle:
             plan = json.load(handle)
         validate_plan(plan)
         if args.expected_id is not None and plan["id"] != args.expected_id:
             fail("$.id", f"debe coincidir con el id esperado {args.expected_id!r}")
+        if args.require_canonical_schema and plan["$schema"] != CANONICAL_SCHEMA_URL:
+            fail("$.$schema", f"debe ser {CANONICAL_SCHEMA_URL!r}")
     except (OSError, json.JSONDecodeError, ValidationError) as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)
         return 1
+
     print(f"[OK] Plan válido: {args.plan}")
     return 0
 
