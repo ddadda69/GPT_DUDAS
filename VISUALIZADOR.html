@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="refresh" content="0; url=./">
-  <title>Decision Viewer</title>
-  <script>location.replace('./');</script>
+  <title>Plan Viewer</title>
+  <script>
+    const target = `./${window.location.search}${window.location.hash}`;
+    window.location.replace(target);
+  </script>
 </head>
 <body>
   <p>El visualizador se ha movido a <a href="./">index.html</a>.</p>

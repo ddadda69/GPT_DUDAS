@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ TYPE_KEYS = {
     "boolean": {"default", "trueLabel", "falseLabel"},
 }
 OPTION_KEYS = {"id", "text", "recommended", "selected"}
+PLAN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 class ValidationError(ValueError):
@@ -149,6 +151,11 @@ def validate_plan(plan: Any) -> None:
 
     optional_string(plan, "$schema", "$")
     require_string(plan, "id", "$", nonempty=True)
+    if not PLAN_ID_RE.fullmatch(plan["id"]):
+        fail(
+            "$.id",
+            "solo admite letras, números, punto, guion y guion bajo, debe empezar por letra o número y tener como máximo 128 caracteres",
+        )
     require_string(plan, "title", "$", nonempty=True)
     optional_string(plan, "description", "$")
     if not is_integer(plan["version"]) or plan["version"] < 1:
@@ -162,11 +169,17 @@ def validate_plan(plan: Any) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("plan", type=Path, help="Archivo JSON que se validará")
+    parser.add_argument(
+        "--expected-id",
+        help="Si se indica, exige que el id del JSON coincida exactamente con este valor",
+    )
     args = parser.parse_args()
     try:
         with args.plan.open("r", encoding="utf-8-sig") as handle:
             plan = json.load(handle)
         validate_plan(plan)
+        if args.expected_id is not None and plan["id"] != args.expected_id:
+            fail("$.id", f"debe coincidir con el id esperado {args.expected_id!r}")
     except (OSError, json.JSONDecodeError, ValidationError) as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)
         return 1
@@ -176,4 +189,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -1,14 +1,53 @@
-const API_URL = 'https://api.github.com/repos/ddadda69/GPT_DUDAS/contents/data/current.json?ref=main';
+const REPOSITORY = 'ddadda69/GPT_DUDAS';
+const BRANCH = 'main';
+const LEGACY_PATH = 'data/current.json';
+const PLAN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 const app = document.getElementById('app');
 const statusEl = document.getElementById('status');
 const reloadBtn = document.getElementById('reload');
+const openJsonLink = document.getElementById('openJson');
 
 let currentPlan = null;
 let currentSha = '';
+let currentSource = null;
 
 if (window.marked) {
   window.marked.setOptions({ gfm: true, breaks: false });
+}
+
+function resolvePlanSource() {
+  const requestedPlanId = new URLSearchParams(window.location.search).get('plan');
+  if (requestedPlanId === null || requestedPlanId === '') {
+    return { planId: null, path: LEGACY_PATH, legacy: true };
+  }
+  if (!PLAN_ID_PATTERN.test(requestedPlanId)) {
+    throw new Error('El parámetro "plan" no es válido. Usa únicamente letras, números, punto, guion o guion bajo (máximo 128 caracteres).');
+  }
+  return {
+    planId: requestedPlanId,
+    path: `data/plans/${requestedPlanId}.json`,
+    legacy: false,
+  };
+}
+
+function encodeRepoPath(path) {
+  return path.split('/').map(segment => encodeURIComponent(segment)).join('/');
+}
+
+function apiUrl(path) {
+  return `https://api.github.com/repos/${REPOSITORY}/contents/${encodeRepoPath(path)}?ref=${encodeURIComponent(BRANCH)}`;
+}
+
+function githubBlobUrl(path) {
+  return `https://github.com/${REPOSITORY}/blob/${encodeURIComponent(BRANCH)}/${encodeRepoPath(path)}`;
+}
+
+function updateSourceUi(source) {
+  currentSource = source;
+  if (!openJsonLink) return;
+  openJsonLink.href = githubBlobUrl(source.path);
+  openJsonLink.textContent = source.legacy ? 'Ver JSON actual' : 'Ver JSON del plan';
 }
 
 function decodeBase64Utf8(base64) {
@@ -434,36 +473,58 @@ function renderPlan(plan, sha) {
   });
 }
 
-function renderError(error) {
+function renderError(error, path) {
   app.textContent = '';
   const card = el('section', 'error-card');
-  card.append(el('strong', '', 'No se pudo cargar data/current.json'), el('pre', '', String(error)));
+  const target = path ? `No se pudo cargar ${path}` : 'No se pudo cargar el plan solicitado';
+  card.append(el('strong', '', target), el('pre', '', String(error)));
   app.appendChild(card);
 }
 
-async function loadCurrent() {
+async function loadPlan() {
   statusEl.textContent = 'Consultando main…';
   reloadBtn.disabled = true;
+  currentSource = null;
   try {
-    const response = await fetch(`${API_URL}&t=${Date.now()}`, {
+    const source = resolvePlanSource();
+    updateSourceUi(source);
+    statusEl.textContent = source.planId ? `Consultando ${source.planId}…` : 'Consultando current.json…';
+
+    const response = await fetch(`${apiUrl(source.path)}&t=${Date.now()}`, {
       cache: 'no-store',
       headers: { Accept: 'application/vnd.github+json' }
     });
-    if (!response.ok) throw new Error(`GitHub API respondió HTTP ${response.status}`);
+    if (!response.ok) {
+      if (response.status === 404 && source.planId) {
+        throw new Error(`No existe el plan "${source.planId}" en main.`);
+      }
+      throw new Error(`GitHub API respondió HTTP ${response.status}`);
+    }
+
     const file = await response.json();
     if (!file.content) throw new Error('GitHub no devolvió el contenido del JSON.');
     const jsonText = decodeBase64Utf8(file.content);
     const plan = JSON.parse(jsonText);
     if (!Array.isArray(plan.sections)) throw new Error('El JSON debe contener un array "sections".');
+    if (source.planId && plan.id !== source.planId) {
+      throw new Error(`El id del JSON ("${plan.id || ''}") no coincide con el plan solicitado ("${source.planId}").`);
+    }
+
     renderPlan(plan, file.sha);
-    statusEl.textContent = `SHA ${String(file.sha || '').slice(0, 8)} · ${new Date().toLocaleTimeString()}`;
+    document.title = `${plan.title || 'Plan Viewer'} · Plan Viewer`;
+    const sourceLabel = source.planId || 'current';
+    statusEl.textContent = `${sourceLabel} · SHA ${String(file.sha || '').slice(0, 8)} · ${new Date().toLocaleTimeString()}`;
   } catch (error) {
     statusEl.textContent = 'Error';
-    renderError(error);
+    if (!currentSource && openJsonLink) {
+      openJsonLink.removeAttribute('href');
+      openJsonLink.textContent = 'Ver JSON';
+    }
+    renderError(error, currentSource?.path);
   } finally {
     reloadBtn.disabled = false;
   }
 }
 
-reloadBtn.addEventListener('click', loadCurrent);
-loadCurrent();
+reloadBtn.addEventListener('click', loadPlan);
+loadPlan();

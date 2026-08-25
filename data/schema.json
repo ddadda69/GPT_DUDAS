@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
   "title": "GPT_DUDAS Plan Viewer",
-  "description": "Contrato formal para data/current.json y data/example.json. Los títulos, descripciones y textos de opción admiten Markdown. En secciones single, el visor añade automáticamente la opción fija 'No implementar'; no debe incluirse manualmente en el JSON.",
+  "description": "Contrato formal para los planes publicados en data/plans/*.json y para los archivos compatibles data/current.json y data/example.json. Los títulos, descripciones y textos de opción admiten Markdown. En secciones single, el visor añade automáticamente la opción fija 'No implementar'; no debe incluirse manualmente en el JSON.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "version", "title", "sections"],
@@ -12,7 +12,10 @@
     },
     "id": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "description": "Identificador estable del plan. En data/plans debe coincidir exactamente con el nombre de archivo <id>.json."
     },
     "version": {
       "type": "integer",

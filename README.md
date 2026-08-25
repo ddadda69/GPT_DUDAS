@@ -6,11 +6,24 @@ Visor estático para presentar planes de ChatGPT con el mismo contenido que tend
 
 El visor **no debe convertir un plan normal en un cuestionario artificial**.
 
-Si ChatGPT, respondiendo normalmente, propondría una sola solución para un punto, `data/current.json` debe contener **una sola opción** con todo el contenido de ese punto. El visor añade automáticamente debajo la opción fija **No implementar** y el campo **Nota**.
+Si ChatGPT, respondiendo normalmente, propondría una sola solución para un punto, el JSON del plan debe contener **una sola opción** con todo el contenido de ese punto. El visor añade automáticamente debajo la opción fija **No implementar** y el campo **Nota**.
 
 Solo se añaden dos o más opciones cuando existe una decisión de implementación real y las alternativas cambiarían de forma relevante la solución.
 
 El texto de cada opción se escribe en Markdown y debe conservar la riqueza de una respuesta normal: párrafos, listas, **negrita**, `código inline`, bloques de código, tablas, enlaces y demás elementos soportados.
+
+## Planes aislados por ID
+
+El Viewer admite varios chats o agentes publicando a la vez sin compartir un único archivo mutable.
+
+- Cada plan normal se guarda en `data/plans/<id>.json`.
+- El `id` también es el nombre del archivo y solo admite letras, números, `.`, `_` y `-`, con un máximo de 128 caracteres.
+- La URL estable de un plan es `https://ddadda69.github.io/GPT_DUDAS/?plan=<id>`.
+- El Viewer valida que el `id` contenido en el JSON coincida exactamente con el solicitado en la URL.
+- `data/current.json` se conserva únicamente como compatibilidad: abrir el Viewer sin `?plan=` sigue cargándolo.
+- No existe un índice global de sesiones que todos los chats tengan que modificar.
+
+Esto permite que dos chats creen o actualicen planes diferentes simultáneamente. Para actualizar el mismo plan, el publicador debe leer antes su SHA y usarlo en la escritura; si el archivo cambió mientras tanto, la actualización se considera un conflicto y no debe sobrescribirse.
 
 ## Comportamiento de cada punto `single`
 
@@ -26,17 +39,7 @@ Si una sección sí tiene varias alternativas reales, el visor las identifica co
 
 ## Estilo
 
-La interfaz usa un tema oscuro inspirado en el aspecto del chat de ChatGPT:
-
-- fondo `#212121`;
-- texto claro;
-- anchura de lectura limitada;
-- separadores discretos;
-- código inline con fondo gris;
-- bloques de código oscuros;
-- listas, tablas, enlaces y citas con estilos Markdown coherentes.
-
-El Markdown se renderiza con `marked` y se sanea con `DOMPurify`.
+La interfaz usa un tema oscuro inspirado en el aspecto del chat de ChatGPT. El Markdown se renderiza con `marked` y se sanea con `DOMPurify`.
 
 ## Estructura
 
@@ -47,20 +50,36 @@ GPT_DUDAS/
 │   ├── viewer.js
 │   └── styles.css
 ├── data/
-│   ├── current.json
+│   ├── current.json          # fallback legacy
 │   ├── example.json
-│   └── schema.json
+│   ├── schema.json
+│   └── plans/
+│       └── <id>.json         # publicación normal
+├── skill-backups/
+│   └── plan-viewer/
 └── README.md
 ```
 
 ## Flujo de uso
 
 1. GitHub Pages publica `index.html` y los archivos de `app/`.
-2. El visor consulta directamente la GitHub Contents API para leer `data/current.json` de `main`.
-3. Para cada nuevo plan normalmente solo se sustituye `data/current.json`.
-4. **Recargar** vuelve a consultar GitHub y muestra el SHA recibido.
-5. El usuario elige implementar una propuesta o **No implementar**, puede editar el contenido y añadir una nota.
-6. **Generar respuesta** / **Copiar para ChatGPT** produce un resumen de las decisiones para continuar la conversación.
+2. Para un plan nuevo se genera un `id` estable y seguro, se comprueba que `data/plans/<id>.json` no exista y se crea con `version: 1`.
+3. Para actualizar un plan existente se lee `data/plans/<id>.json`, se conserva `id`, se incrementa `version` y se escribe usando el SHA leído.
+4. El Viewer recibe ese mismo `id` mediante `?plan=<id>` y consulta directamente la GitHub Contents API en `main`.
+5. **Recargar** vuelve a consultar GitHub y muestra el SHA recibido.
+6. El usuario elige implementar una propuesta o **No implementar**, puede editar el contenido y añadir una nota.
+7. **Generar respuesta** / **Copiar para ChatGPT** produce un resumen de las decisiones para continuar la conversación.
+
+## Identidad, versiones y concurrencia
+
+Para planes publicados en `data/plans/` se aplican estas reglas:
+
+- El nombre del archivo debe ser exactamente `<id>.json`.
+- Un plan nuevo empieza en `version: 1`.
+- Una actualización conserva el mismo `id` e incrementa exactamente en uno la versión remota vigente.
+- Nunca se deduce un plan existente mirando `data/current.json`.
+- Si no existe un identificador fiable para continuar un plan, se crea uno nuevo en lugar de adivinar.
+- Una actualización requiere el SHA obtenido en la lectura inmediatamente anterior. Un conflicto detiene la publicación; no se hace un overwrite ciego.
 
 ## Contrato JSON
 
@@ -98,6 +117,6 @@ El schema mantiene compatibilidad con `multiple`, `text` y `boolean`, aunque par
 
 ## Caché y GitHub Pages
 
-Los cambios en `data/current.json` se leen directamente desde la API de GitHub y suelen estar disponibles al recargar inmediatamente.
+Los JSON de `data/plans/` y `data/current.json` se leen directamente desde la API de GitHub con `cache: no-store` y un parámetro de cache-busting, por lo que suelen estar disponibles inmediatamente al recargar.
 
-Los cambios en `index.html`, `app/viewer.js` o `app/styles.css` necesitan que GitHub Pages publique el nuevo commit; por eso pueden tardar algo más en verse que un simple cambio de `current.json`.
+Los cambios en `index.html`, `app/viewer.js` o `app/styles.css` necesitan que GitHub Pages publique el nuevo commit; por eso pueden tardar algo más en verse.
