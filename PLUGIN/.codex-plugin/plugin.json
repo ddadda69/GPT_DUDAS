@@ -1,0 +1,30 @@
+{
+  "name": "plan-viewer-plugin",
+  "version": "0.1.0",
+  "description": "Plan Viewer independiente con MCP server y UI embebida para ChatGPT/Codex.",
+  "repository": "https://github.com/ddadda69/GPT_DUDAS",
+  "keywords": [
+    "plans",
+    "mcp",
+    "mcp-apps",
+    "productivity"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Plan Viewer Plugin",
+    "shortDescription": "Decide planes dentro de la conversación",
+    "longDescription": "Presenta planes estructurados en una UI MCP Apps embebida, recoge decisiones y las devuelve al modelo sin copiar y pegar.",
+    "developerName": "ddadda69",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Usa Plan Viewer Plugin para presentar este plan y recoger mis decisiones.",
+      "Muéstrame este plan de implementación en el Plan Viewer embebido."
+    ],
+    "brandColor": "#10A37F"
+  }
+}
