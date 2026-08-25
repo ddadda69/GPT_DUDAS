@@ -1,81 +1,90 @@
 {
   "$schema": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
-  "id": "ejemplo-cache-api-consultas-2026-08-25",
-  "version": 2,
-  "title": "Ejemplo: añadir caché a una API de consultas",
-  "description": "Plan ilustrativo para reducir la latencia y la carga sobre la base de datos sin cambiar el contrato público de la API. El objetivo del ejemplo es mostrar cómo Plan Viewer presenta una **decisión real** y conserva el resto del plan completo en Markdown.",
+  "id": "plan-viewer-plugin-mcp-20260825-1129-k7m4",
+  "version": 1,
+  "title": "Siguiente nivel de Plan Viewer: plugin embebido en la conversación",
+  "description": "Evolucionar Plan Viewer desde un visor web externo hacia un plugin de ChatGPT con servidor MCP y UI MCP Apps embebida, manteniendo la robustez y el aislamiento por plan que ya tiene la versión web.",
   "sections": [
     {
-      "id": "arquitectura-cache",
-      "title": "1. Elegir la arquitectura de caché",
-      "description": "Esta decisión cambia de forma importante la implementación y la operación, por lo que se presentan dos alternativas reales.",
+      "id": "arquitectura-plugin",
+      "title": "1. Convertir Plan Viewer en un plugin MCP con UI embebida",
+      "description": "La documentación actual de OpenAI permite que un plugin combine skills, un servidor MCP y UI opcional. Para Plan Viewer, la UI es especialmente adecuada porque el usuario necesita inspeccionar, comparar, editar y confirmar información estructurada.",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "**Redis compartido — recomendado para producción.** Todas las instancias de la API leen y escriben en la misma caché, por lo que una respuesta almacenada se reutiliza aunque la siguiente petición llegue a otro servidor.\n\nVentajas:\n\n- Comportamiento consistente al escalar horizontalmente.\n- TTL e invalidación centralizados.\n- Métricas y límites independientes del proceso de la API.\n\nConsecuencias:\n\n- Añade una dependencia de infraestructura y credenciales.\n- La API debe tolerar que Redis falle: ante un error, consulta la base de datos y responde normalmente.\n- Conviene definir límites de memoria y una política de expulsión, por ejemplo `allkeys-lru`."
+          "text": "**Arquitectura híbrida — recomendada.** Crear un plugin compuesto por la skill de Plan Viewer, un servidor MCP y una UI MCP Apps que se renderice dentro de ChatGPT. La experiencia principal en ChatGPT pasa a ser el componente embebido, mientras que el Viewer web actual se conserva como superficie portátil y de respaldo para Codex, depuración y enlaces permanentes.\n\nEl servidor MCP será la fuente de herramientas y validación; la UI recibirá el plan como `structuredContent` y se asociará al tool mediante `_meta.ui.resourceUri`. El componente se servirá como recurso `text/html;profile=mcp-app`.\n\n**Ventajas:**\n\n- El usuario decide y edita sin abandonar la conversación.\n- ChatGPT puede seguir el flujo inmediatamente después de recibir las decisiones.\n- El mismo tool sigue siendo útil en clientes que no rendericen UI, como exige la arquitectura recomendada por OpenAI.\n- No se pierde el Viewer web ya endurecido ni los enlaces `?plan=<id>`.\n- Permite migrar gradualmente y comparar la fiabilidad del plugin con la versión estática antes de retirar nada.\n\n**Resultado esperado:** pedir un plan invoca el plugin, aparece Plan Viewer dentro de la conversación y el enlace web queda como fallback, no como flujo principal."
         },
         {
           "id": 2,
-          "text": "**Caché en memoria dentro de la API.** Cada instancia conserva sus propias entradas mediante una caché LRU. Es adecuada para un despliegue sencillo con una sola instancia o para una primera prueba local.\n\nVentajas:\n\n- No requiere servicios externos.\n- Implementación y operación más simples.\n\nConsecuencias:\n\n- Las instancias no comparten datos y pueden devolver resultados con distinta antigüedad.\n- La caché desaparece al reiniciar el proceso.\n- El consumo de memoria compite con el resto de la aplicación.\n\nSi la API va a ejecutarse con varias réplicas, esta opción debería considerarse temporal."
+          "text": "**Plugin como única interfaz.** Implementar la misma arquitectura MCP + UI, pero retirar GitHub Pages y el Viewer web cuando el plugin funcione.\n\nReduce superficies y mantenimiento a largo plazo, pero obliga a que toda la experiencia dependa del host que soporte MCP Apps UI y elimina un mecanismo muy útil para depuración, portabilidad y uso fuera de ChatGPT. Solo elegiría esta variante después de varias semanas de uso estable del plugin."
         }
       ],
-      "allowOther": false,
-      "allowNote": true,
-      "notePlaceholder": "Añade aquí una restricción de infraestructura o una preferencia…"
+      "allowOther": true,
+      "allowNote": true
     },
     {
-      "id": "contrato-cache",
-      "title": "2. Definir el comportamiento de la caché",
+      "id": "contrato-tools",
+      "title": "2. Separar presentación del plan y devolución de decisiones",
+      "description": "El punto clave no es solo mostrar el formulario dentro del chat, sino hacer que lo seleccionado vuelva al modelo de forma estructurada y validada.",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Aplicar el patrón **cache-aside** sin modificar los códigos, cabeceras ni cuerpos de respuesta existentes.\n\n1. Construir una clave estable con la versión del esquema, el endpoint, el usuario o tenant autorizado y los parámetros normalizados.\n2. Consultar la caché antes de acceder a la base de datos.\n3. Si existe una entrada válida, deserializarla y devolver exactamente la misma respuesta pública.\n4. Si no existe, ejecutar la consulta, guardar únicamente respuestas correctas y devolver el resultado.\n\nReglas iniciales:\n\n- TTL predeterminado: **5 minutos**, configurable mediante `CACHE_TTL_SECONDS`.\n- No almacenar errores, respuestas parciales ni datos que el solicitante no pueda volver a consultar.\n- Incluir un prefijo de versión, por ejemplo `queries:v1:`, para invalidar el formato completo sin recorrer claves.\n- Cuando una operación modifique datos, eliminar las claves afectadas; si no es posible determinar cuáles son, usar un TTL corto hasta introducir invalidación por etiquetas.\n- Si la caché no está disponible, continuar contra la base de datos y registrar el fallo sin afectar al usuario."
+          "text": "**Dos tools — recomendado:** `present_plan` y `submit_plan_decisions`.\n\n`present_plan`:\n- recibe el JSON completo del plan;\n- lo valida con el mismo contrato de Plan Viewer;\n- guarda/publica el snapshot cuando proceda;\n- devuelve `structuredContent` con `id`, `version`, título y secciones;\n- está enlazado al recurso UI mediante `_meta.ui.resourceUri`, por lo que ChatGPT muestra el Viewer embebido.\n\n`submit_plan_decisions`:\n- recibe `planId`, `version` y una decisión por sección;\n- admite opción elegida, `No implementar`, `Otra`, contenido editado y nota;\n- rechaza IDs/versiones que no coincidan con el plan mostrado;\n- devuelve un objeto estructurado y un resumen textual visible para el modelo.\n\nLa UI llama `submit_plan_decisions` mediante `tools/call`. Así el resultado no depende del portapapeles: el servidor valida la respuesta y el modelo recibe un resultado estructurado que puede aplicar en el mismo flujo.\n\nMantendría `ui/message` únicamente para solicitar explícitamente un nuevo turno conversacional cuando sea útil, no como canal principal de datos."
+        },
+        {
+          "id": 2,
+          "text": "**Un único tool de presentación + `ui/message`.** `present_plan` renderiza el componente y, al confirmar, la UI genera el mismo texto que hoy copia Plan Viewer y lo envía como mensaje de seguimiento.\n\nEs más pequeño para un prototipo, pero el resultado queda menos tipado y obliga al modelo a reinterpretar texto que ya teníamos estructurado. También desplaza validación importante al cliente. Es válido para una prueba muy rápida, pero no lo elegiría como arquitectura definitiva."
+        }
+      ],
+      "allowOther": true,
+      "allowNote": true
+    },
+    {
+      "id": "componente-ui",
+      "title": "3. Rehacer la interfaz como componente MCP Apps sin duplicar lógica",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Crear un pequeño proyecto TypeScript/React separado del servidor, siguiendo la separación recomendada por OpenAI (`server/` y `web/`). El componente recibirá siempre el último resultado de tool por `ui/notifications/tool-result` y tratará `structuredContent` como entrada no confiable.\n\nLa lógica se dividirá en tres capas reutilizables:\n\n1. **Contrato puro:** tipos, validación del plan y validación de decisiones, sin DOM ni React.\n2. **Estado de decisión:** opción seleccionada, edición Markdown, `Otra` y nota. Es estado efímero del componente; puede sincronizarse con `ui/update-model-context` cuando el modelo deba conocer cambios todavía no enviados.\n3. **Render:** cards, radios, editor Markdown y confirmación.\n\nNo usaría `localStorage` para datos del plan. OpenAI recomienda que los datos autoritativos vivan en servidor/servicio y que el estado de UI sea efímero; si más adelante necesitamos persistencia entre conversaciones se añadirá almacenamiento server-side.\n\nEl Viewer web puede reutilizar el mismo contrato y tests aunque tenga un render distinto, evitando que vuelvan a divergir schema, navegador y plugin."
         }
       ],
       "allowOther": false,
       "allowNote": true
     },
     {
-      "id": "implementacion",
-      "title": "3. Implementar por capas",
+      "id": "persistencia",
+      "title": "4. Mantener GitHub como almacenamiento inicial del plugin",
+      "description": "El plugin necesita decidir dónde viven los planes una vez que el UI ya no depende directamente de GitHub Pages.",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Separar la integración en componentes pequeños para que la lógica del endpoint no dependa directamente del proveedor elegido.\n\n- Crear una interfaz `CacheStore` con operaciones `get`, `set` y `delete`.\n- Implementar `RedisCacheStore` o `MemoryCacheStore` según la decisión anterior.\n- Añadir un servicio `CachedQueryService` que genere claves, aplique TTL y recurra al repositorio existente cuando haya un fallo de caché.\n- Inyectar el servicio en los endpoints de lectura seleccionados.\n- Mantener la caché desactivable con `CACHE_ENABLED=false` para facilitar el despliegue y la reversión.\n\nFlujo simplificado:\n\n```text\npetición -> clave normalizada -> buscar en caché\n                               | hit  -> devolver respuesta\n                               | miss -> consultar BD -> guardar -> devolver\n                               | error de caché -> consultar BD -> devolver\n```\n\nEmpezar con un único endpoint de alto volumen. Tras verificar métricas y consistencia, extender el patrón al resto de consultas aptas."
+          "text": "**GitHub como backend inicial — recomendado.** Mantener `data/plans/<id>.json` como fuente de verdad y `current.json` como espejo del último plan, pero mover todas las lecturas/escrituras al servidor MCP. La UI nunca tendrá credenciales ni escribirá GitHub directamente.\n\nEl servidor conserva la protección actual:\n- verificación de identidad/autorización;\n- creación exclusiva de IDs nuevos;\n- actualización con SHA esperado;\n- `id` y `version` estrictos;\n- conflicto explícito si otro proceso cambia el mismo plan;\n- actualización de `current.json` únicamente como espejo no canónico.\n\nEsto aprovecha el sistema que ya está funcionando y mantiene los planes inspeccionables y restaurables."
+        },
+        {
+          "id": 2,
+          "text": "**Persistencia propia del servidor.** Guardar planes y decisiones en SQLite/PostgreSQL u otro almacenamiento controlado por el MCP server, usando GitHub solo como código y backup.\n\nTiene más sentido si Plan Viewer acaba teniendo muchos usuarios, búsqueda, historial de decisiones, permisos por usuario o miles de planes. Para uso personal añade despliegue, backups, autenticación y migraciones sin resolver ahora un problema real."
         }
       ],
-      "allowOther": false,
+      "allowOther": true,
       "allowNote": true
     },
     {
-      "id": "pruebas-observabilidad",
-      "title": "4. Verificar rendimiento y corrección",
+      "id": "entrega-pruebas",
+      "title": "5. Implementarlo por fases con pruebas de conversación reales",
       "defaultOption": 1,
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Cubrir el comportamiento funcional, los fallos y el efecto medible antes de ampliar el uso.\n\n| Área | Comprobación |\n|---|---|\n| Pruebas unitarias | Hit, miss, TTL, clave normalizada y serialización |\n| Integración | Redis disponible, caído y con datos corruptos |\n| Seguridad | Separación por usuario/tenant y ausencia de datos sensibles en las claves |\n| Compatibilidad | Respuestas idénticas con caché activada y desactivada |\n| Carga | Latencia p50/p95 y consultas por segundo antes y después |\n\nAñadir métricas `cache_hit`, `cache_miss`, `cache_error` y duración de la consulta a base de datos. El objetivo inicial será aumentar progresivamente la tasa de aciertos sin elevar errores ni servir datos fuera del TTL acordado. Los logs no deben incluir valores sensibles ni el contenido completo almacenado."
-        }
-      ],
-      "allowOther": false,
-      "allowNote": true
-    },
-    {
-      "id": "despliegue-reversion",
-      "title": "5. Desplegar de forma gradual y reversible",
-      "defaultOption": 1,
-      "options": [
-        {
-          "id": 1,
-          "recommended": true,
-          "text": "Desplegar primero con `CACHE_ENABLED=false`, comprobar conectividad y activar la caché solo para el endpoint piloto. Durante la primera ventana de observación, comparar latencia, tasa de errores, consultas a base de datos y uso de memoria.\n\nCriterios de finalización:\n\n- El contrato público de la API no cambia.\n- Un fallo del proveedor de caché no impide responder.\n- Las pruebas de aislamiento y expiración pasan.\n- La reducción de consultas a base de datos es visible en métricas.\n- La operación queda documentada, incluidas configuración, invalidación y diagnóstico.\n\nLa reversión consiste en establecer `CACHE_ENABLED=false`; no requiere deshacer el despliegue ni borrar inmediatamente las entradas, porque dejan de consultarse y caducan por TTL."
+          "text": "Haría la migración en una rama nueva, sin tocar el flujo web estable hasta que el plugin pase pruebas reales.\n\n**Fase 1 — núcleo MCP**\n- Crear `present_plan` y `submit_plan_decisions`.\n- Reutilizar el schema actual y añadir un schema formal para la respuesta del usuario.\n- Probar ambos tools sin UI para garantizar que ChatGPT/Codex pueden completar el flujo solo con herramientas.\n\n**Fase 2 — UI embebida**\n- Registrar el recurso MCP Apps y asociarlo a `present_plan`.\n- Implementar radios, edición Markdown, `Otra`, nota y botón de confirmación.\n- Hacer que confirmar llame `submit_plan_decisions`.\n- Devolver al modelo tanto `structuredContent` como un resumen compacto.\n\n**Fase 3 — integración con la skill**\n- La skill deja de construir un enlace como mecanismo principal y llama al tool del plugin.\n- Conserva la regla de escribir el plan completo también en la conversación.\n- Cuando no haya UI disponible, el tool y la respuesta textual siguen siendo suficientes.\n\n**Fase 4 — pruebas**\n- Dos chats simultáneos con planes distintos.\n- Dos chats intentando actualizar el mismo `id`.\n- Edición de Markdown, `Otra`, `No implementar` y notas.\n- Recarga/reapertura de una conversación.\n- Cliente sin UI.\n- Fallo de GitHub/MCP y recuperación sin pérdida del plan.\n\n**Criterio para darlo por terminado:** desde una conversación se puede pedir un plan, decidir dentro del componente y recibir inmediatamente esas decisiones de vuelta en ChatGPT sin copiar/pegar, manteniendo el enlace web como respaldo verificable."
         }
       ],
       "allowOther": false,
