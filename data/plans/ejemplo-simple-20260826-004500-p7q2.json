@@ -1,0 +1,24 @@
+{
+  "$schema": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
+  "id": "ejemplo-simple-20260826-004500-p7q2",
+  "version": 1,
+  "title": "Ejemplo simple: crear una página de bienvenida",
+  "description": "Un plan mínimo para demostrar cómo Plan Viewer presenta una propuesta sencilla sin inventar alternativas innecesarias.",
+  "sections": [
+    {
+      "id": "pagina-bienvenida",
+      "title": "1. Crear una página de bienvenida mínima",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Crear una página de bienvenida sencilla con:\n\n- un título claro;\n- una frase breve que explique el propósito del sitio;\n- un botón **Comenzar** que lleve a la pantalla principal.\n\nReutilizar los colores y estilos existentes para que la nueva página encaje con el resto del producto. Después, comprobar que se vea correctamente tanto en escritorio como en móvil y que el botón abra el destino esperado.\n\n**Resultado:** una entrada clara al sitio, fácil de entender y sin añadir complejidad innecesaria."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true,
+      "notePlaceholder": "Añade un matiz para este ejemplo…"
+    }
+  ]
+}
