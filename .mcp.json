@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "plan-viewer-plugin": {
+      "command": "node",
+      "args": [
+        "server-dist/main.js",
+        "--stdio"
+      ],
+      "cwd": ".",
+      "env": {
+        "PLAN_VIEWER_PLUGIN_REPO": "ddadda69/GPT_DUDAS",
+        "PLAN_VIEWER_PLUGIN_BRANCH": "main",
+        "PLAN_VIEWER_PLUGIN_ROOT": "PLUGIN/plan-viewer-plugin"
+      }
+    }
+  }
+}
