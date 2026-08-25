@@ -53,10 +53,11 @@ macOS/Linux: $HOME/.agents/skills/plan-viewer
 - Repositorio: `ddadda69/GPT_DUDAS`.
 - Rama: `main`.
 - Esquema autoritativo: `data/schema.json`.
-- Cada plan normal se publica de forma aislada en `data/plans/<id>.json`.
-- URL: `https://ddadda69.github.io/GPT_DUDAS/?plan=<id>`.
-- `data/current.json` queda como compatibilidad legacy y no debe reemplazarse durante una publicación normal.
-- Una actualización exige leer primero el SHA del archivo concreto y escribir usando ese SHA; un conflicto nunca se sobrescribe a la fuerza.
+- Cada plan normal se publica de forma canónica en `data/plans/<id>.json`.
+- URL estable: `https://ddadda69.github.io/GPT_DUDAS/?plan=<id>`.
+- `data/current.json` es un espejo de conveniencia: sin `?plan=` el Viewer carga ese archivo y normalmente muestra el último plan publicado correctamente.
+- La habilidad captura el SHA de `current.json` al empezar a preparar el plan y solo actualiza el espejo si ese SHA sigue vigente; un cambio concurrente nunca se sobrescribe a la fuerza.
+- Una actualización de un plan existente exige leer primero el SHA de su archivo concreto y escribir usando ese SHA.
 
 ## Dependencias y permisos
 
@@ -68,9 +69,10 @@ macOS/Linux: $HOME/.agents/skills/plan-viewer
 ## Prueba rápida tras restaurar
 
 1. Pide un plan sencillo usando `$plan-viewer`.
-2. Comprueba que se cree un archivo nuevo bajo `data/plans/` y que no cambie `data/current.json`.
-3. Abre manualmente la URL devuelta con `?plan=<id>`.
-4. Actualiza el mismo plan y verifica que mantiene `id`, incrementa `version` y modifica únicamente ese archivo.
-5. Inicia otro chat y publica otro plan: debe obtener otro `id` y otro archivo, sin afectar al primero.
+2. Comprueba que se cree un archivo nuevo bajo `data/plans/`.
+3. Comprueba que `data/current.json` contenga exactamente el mismo plan si no hubo concurrencia.
+4. Abre la URL raíz y verifica que muestra ese plan; abre también la URL estable con `?plan=<id>`.
+5. Actualiza el mismo plan y verifica que mantiene `id`, incrementa `version` y actualiza tanto el archivo aislado como `current.json` en el caso normal.
+6. Para probar concurrencia, inicia dos publicaciones desde el mismo estado de `current.json`: ambas deben conservar sus archivos aislados y como máximo una debe poder actualizar el espejo con el SHA inicial.
 
 Documentación oficial: https://learn.chatgpt.com/docs/build-skills

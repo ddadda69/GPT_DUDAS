@@ -14,16 +14,16 @@ El texto de cada opción se escribe en Markdown y debe conservar la riqueza de u
 
 ## Planes aislados por ID
 
-El Viewer admite varios chats o agentes publicando a la vez sin compartir un único archivo mutable.
+El Viewer admite varios chats o agentes publicando a la vez sin usar `current.json` como almacenamiento canónico.
 
 - Cada plan normal se guarda en `data/plans/<id>.json`.
 - El `id` también es el nombre del archivo y solo admite letras, números, `.`, `_` y `-`, con un máximo de 128 caracteres.
 - La URL estable de un plan es `https://ddadda69.github.io/GPT_DUDAS/?plan=<id>`.
 - El Viewer valida que el `id` contenido en el JSON coincida exactamente con el solicitado en la URL.
-- `data/current.json` se conserva únicamente como compatibilidad: abrir el Viewer sin `?plan=` sigue cargándolo.
+- `data/current.json` es un **espejo de conveniencia** del último plan publicado correctamente en el caso normal; abrir el Viewer sin `?plan=` lo carga.
 - No existe un índice global de sesiones que todos los chats tengan que modificar.
 
-Esto permite que dos chats creen o actualicen planes diferentes simultáneamente. Para actualizar el mismo plan, el publicador debe leer antes su SHA y usarlo en la escritura; si el archivo cambió mientras tanto, la actualización se considera un conflicto y no debe sobrescribirse.
+Así, dos chats pueden conservar planes distintos sin interferirse. Los archivos de `data/plans/` son la fuente de verdad; `current.json` solo facilita abrir rápidamente el último plan sin parámetros.
 
 ## Comportamiento de cada punto `single`
 
@@ -50,11 +50,11 @@ GPT_DUDAS/
 │   ├── viewer.js
 │   └── styles.css
 ├── data/
-│   ├── current.json          # fallback legacy
+│   ├── current.json          # espejo del último plan, no canónico
 │   ├── example.json
 │   ├── schema.json
 │   └── plans/
-│       └── <id>.json         # publicación normal
+│       └── <id>.json         # publicación canónica
 ├── skill-backups/
 │   └── plan-viewer/
 └── README.md
@@ -63,12 +63,15 @@ GPT_DUDAS/
 ## Flujo de uso
 
 1. GitHub Pages publica `index.html` y los archivos de `app/`.
-2. Para un plan nuevo se genera un `id` estable y seguro, se comprueba que `data/plans/<id>.json` no exista y se crea con `version: 1`.
-3. Para actualizar un plan existente se lee `data/plans/<id>.json`, se conserva `id`, se incrementa `version` y se escribe usando el SHA leído.
-4. El Viewer recibe ese mismo `id` mediante `?plan=<id>` y consulta directamente la GitHub Contents API en `main`.
-5. **Recargar** vuelve a consultar GitHub y muestra el SHA recibido.
-6. El usuario elige implementar una propuesta o **No implementar**, puede editar el contenido y añadir una nota.
-7. **Generar respuesta** / **Copiar para ChatGPT** produce un resumen de las decisiones para continuar la conversación.
+2. Al iniciar una publicación, el agente lee `data/current.json` y conserva su SHA como bloqueo optimista del espejo.
+3. Para un plan nuevo se genera un `id` estable y seguro, se comprueba que `data/plans/<id>.json` no exista y se crea con `version: 1`.
+4. Para actualizar un plan existente se lee `data/plans/<id>.json`, se conserva `id`, se incrementa `version` y se escribe usando el SHA leído.
+5. Tras verificar el archivo canónico, el mismo JSON se copia a `data/current.json` usando el SHA guardado al principio.
+6. Si `current.json` cambió entretanto por otro chat, la escritura del espejo falla y no se fuerza; el plan aislado sigue publicado correctamente.
+7. El Viewer recibe el `id` mediante `?plan=<id>` para cargar el archivo estable, o sin parámetros carga `current.json`.
+8. **Recargar** vuelve a consultar GitHub y muestra el SHA recibido.
+9. El usuario elige implementar una propuesta o **No implementar**, puede editar el contenido y añadir una nota.
+10. **Generar respuesta** / **Copiar para ChatGPT** produce un resumen de las decisiones para continuar la conversación.
 
 ## Identidad, versiones y concurrencia
 
@@ -80,6 +83,8 @@ Para planes publicados en `data/plans/` se aplican estas reglas:
 - Nunca se deduce un plan existente mirando `data/current.json`.
 - Si no existe un identificador fiable para continuar un plan, se crea uno nuevo en lugar de adivinar.
 - Una actualización requiere el SHA obtenido en la lectura inmediatamente anterior. Un conflicto detiene la publicación; no se hace un overwrite ciego.
+
+`data/current.json` tiene una regla distinta: es un espejo compartido. Su SHA se captura **antes de preparar el plan** y se usa después para actualizarlo. Si otro chat lo modificó mientras tanto, GitHub rechaza la escritura y no se reintenta con un SHA más nuevo. En ausencia de concurrencia, la URL raíz muestra siempre el último plan publicado; bajo concurrencia, la URL estable con `?plan=<id>` es la referencia correcta.
 
 ## Contrato JSON
 
