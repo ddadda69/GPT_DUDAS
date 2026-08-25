@@ -14,7 +14,7 @@ from typing import Any
 CANONICAL_SCHEMA_URL = "https://ddadda69.github.io/GPT_DUDAS/data/schema.json"
 PLAN_KEYS = {"$schema", "id", "version", "title", "description", "sections"}
 SECTION_KEYS = {
-    "id", "title", "description", "type", "options", "defaultOption",
+    "id", "title", "description", "options", "defaultOption",
     "allowOther", "allowNote", "noteLabel", "notePlaceholder",
 }
 OPTION_KEYS = {"id", "text", "recommended"}
@@ -94,9 +94,6 @@ def validate_section(section: Any, index: int) -> str:
     optional_bool(section, "allowOther", path)
     optional_bool(section, "allowNote", path)
 
-    if section.get("type") != "single":
-        fail(f"{path}.type", "debe ser exactamente 'single'")
-
     options = section.get("options")
     if not isinstance(options, list) or not 1 <= len(options) <= 2:
         fail(f"{path}.options", "debe contener una o dos opciones")
@@ -130,7 +127,8 @@ def validate_plan(plan: Any) -> None:
         if required not in plan:
             fail("$", f"falta el campo obligatorio {required}")
 
-    require_string(plan, "$schema", "$", nonempty=True)
+    if plan["$schema"] != CANONICAL_SCHEMA_URL:
+        fail("$.$schema", f"debe ser exactamente {CANONICAL_SCHEMA_URL!r}")
     require_safe_id(plan.get("id"), "$.id")
     require_string(plan, "title", "$", nonempty=True)
     optional_string(plan, "description", "$")
@@ -154,11 +152,6 @@ def main() -> int:
         "--expected-id",
         help="Si se indica, exige que el id del JSON coincida exactamente con este valor",
     )
-    parser.add_argument(
-        "--require-canonical-schema",
-        action="store_true",
-        help=f"Exige $schema={CANONICAL_SCHEMA_URL}",
-    )
     args = parser.parse_args()
 
     try:
@@ -167,8 +160,6 @@ def main() -> int:
         validate_plan(plan)
         if args.expected_id is not None and plan["id"] != args.expected_id:
             fail("$.id", f"debe coincidir con el id esperado {args.expected_id!r}")
-        if args.require_canonical_schema and plan["$schema"] != CANONICAL_SCHEMA_URL:
-            fail("$.$schema", f"debe ser {CANONICAL_SCHEMA_URL!r}")
     except (OSError, json.JSONDecodeError, ValidationError) as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)
         return 1

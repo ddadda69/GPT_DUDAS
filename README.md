@@ -19,15 +19,14 @@ El parámetro `plan` solo admite letras, números, `.`, `_` y `-`, con un máxim
 
 ## Contrato actual
 
-El contrato formal está en `data/schema.json`. No se mantienen variantes antiguas del formato.
+El contrato formal está en `data/schema.json`. No se mantienen variantes antiguas ni un campo `type` redundante.
 
-Cada sección es `type: "single"` y contiene una o dos opciones como máximo:
+Cada sección representa directamente una decisión y contiene una o dos opciones como máximo:
 
 ```json
 {
   "id": "arquitectura",
   "title": "1. Elegir arquitectura",
-  "type": "single",
   "defaultOption": 1,
   "options": [
     {
@@ -47,6 +46,7 @@ Cada sección es `type: "single"` y contiene una o dos opciones como máximo:
 
 Reglas adicionales:
 
+- `$schema` debe ser exactamente `https://ddadda69.github.io/GPT_DUDAS/data/schema.json`.
 - Las opciones se numeran exactamente `1` y, si existe, `2`.
 - Debe haber exactamente una opción `recommended: true` y debe coincidir con `defaultOption`.
 - **No implementar**, **Editar** y **Nota** son controles del Viewer y no opciones JSON.

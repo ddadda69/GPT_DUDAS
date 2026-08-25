@@ -59,9 +59,9 @@ macOS/Linux: $HOME/.agents/skills/plan-viewer
 
 ## Contrato
 
-La versión actual solo admite secciones `single` con una o dos opciones. No se mantienen tipos históricos `multiple`, `text` o `boolean`.
+La versión actual no mantiene formatos históricos ni usa un campo `type`. Cada sección contiene una o dos opciones, numeradas consecutivamente desde 1, y debe existir exactamente una `recommended: true` que coincida con `defaultOption`.
 
-Las opciones se numeran consecutivamente desde 1 y debe existir exactamente una `recommended: true` que coincida con `defaultOption`.
+`$schema` debe ser exactamente `https://ddadda69.github.io/GPT_DUDAS/data/schema.json`.
 
 ## Dependencias
 

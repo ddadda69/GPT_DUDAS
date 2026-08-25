@@ -2,14 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
   "title": "GPT_DUDAS Plan Viewer",
-  "description": "Contrato formal de Plan Viewer. Cada sección representa una decisión single con una o dos opciones reales. El visor añade por interfaz No implementar, Nota y, cuando allowOther es true, Otra.",
+  "description": "Contrato formal de Plan Viewer. Cada sección representa una decisión con una o dos opciones reales. El visor añade por interfaz No implementar, Nota y, cuando allowOther es true, Otra.",
   "type": "object",
   "additionalProperties": false,
   "required": ["$schema", "id", "version", "title", "sections"],
   "properties": {
     "$schema": {
-      "type": "string",
-      "minLength": 1
+      "const": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json"
     },
     "id": {
       "type": "string",
@@ -64,7 +63,7 @@
     "section": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "title", "type", "options", "defaultOption"],
+      "required": ["id", "title", "options", "defaultOption"],
       "properties": {
         "id": {
           "type": "string",
@@ -80,9 +79,6 @@
         "description": {
           "type": "string",
           "contentMediaType": "text/markdown"
-        },
-        "type": {
-          "const": "single"
         },
         "options": {
           "type": "array",

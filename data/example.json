@@ -8,7 +8,6 @@
     {
       "id": "mejora-sin-alternativas",
       "title": "1. Mejora sin alternativas reales",
-      "type": "single",
       "defaultOption": 1,
       "options": [
         {
@@ -25,7 +24,6 @@
       "id": "mejora-con-decision-real",
       "title": "2. Mejora con dos alternativas reales",
       "description": "Solo añade una segunda opción cuando cambia de forma relevante la implementación.",
-      "type": "single",
       "defaultOption": 1,
       "options": [
         {

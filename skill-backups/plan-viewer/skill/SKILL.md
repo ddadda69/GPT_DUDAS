@@ -21,11 +21,11 @@ Antes de generar JSON, lee por completo `references/schema.json`. Usa `reference
 
 ## Contrato actual
 
-No mantengas formatos antiguos. El contrato actual solo admite secciones `type: "single"`.
+No mantengas formatos antiguos ni discriminadores de tipo. Cada sección representa directamente una decisión.
 
 Cada sección:
 
-- tiene `id`, `title`, `type`, `options` y `defaultOption`;
+- tiene `id`, `title`, `options` y `defaultOption`;
 - contiene **una o dos opciones como máximo**;
 - numera las opciones exactamente como `1` y, si existe, `2`;
 - tiene exactamente una opción `recommended: true`, que debe coincidir con `defaultOption`;
@@ -53,8 +53,8 @@ Un plan nuevo empieza en `version: 1`. Para actualizar uno existente, lee su arc
 2. Investiga lo necesario y redacta el plan completo para la conversación.
 3. Convierte exactamente ese contenido al esquema actual, sin inventar alternativas.
 4. Decide si es nuevo o continuación de un plan identificado con certeza.
-5. Usa preferentemente `$schema: "https://ddadda69.github.io/GPT_DUDAS/data/schema.json"`.
-6. Valida el JSON con `scripts/validate_plan.py --expected-id <id> --require-canonical-schema` cuando haya Python disponible.
+5. Usa exactamente `$schema: "https://ddadda69.github.io/GPT_DUDAS/data/schema.json"`.
+6. Valida el JSON con `scripts/validate_plan.py --expected-id <id>` cuando haya Python disponible.
 7. Si no hay Python, valida manualmente todos los requisitos del esquema remoto y además:
    - una o dos opciones por sección;
    - IDs de opción consecutivos desde 1;

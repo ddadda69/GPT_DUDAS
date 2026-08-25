@@ -1,10 +1,11 @@
 const REPOSITORY = 'ddadda69/GPT_DUDAS';
 const BRANCH = 'main';
 const CURRENT_PATH = 'data/current.json';
+const CANONICAL_SCHEMA_URL = 'https://ddadda69.github.io/GPT_DUDAS/data/schema.json';
 const PLAN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const PLAN_KEYS = new Set(['$schema', 'id', 'version', 'title', 'description', 'sections']);
 const SECTION_KEYS = new Set([
-  'id', 'title', 'description', 'type', 'options', 'defaultOption',
+  'id', 'title', 'description', 'options', 'defaultOption',
   'allowOther', 'allowNote', 'noteLabel', 'notePlaceholder'
 ]);
 const OPTION_KEYS = new Set(['id', 'text', 'recommended']);
@@ -41,7 +42,7 @@ function isPositiveInteger(value) {
 function validatePlan(plan, expectedPlanId = null) {
   assert(isPlainObject(plan), 'El JSON raíz debe ser un objeto.');
   assertOnlyKeys(plan, PLAN_KEYS, '$');
-  assert(typeof plan.$schema === 'string' && plan.$schema.trim(), 'Falta un $schema válido.');
+  assert(plan.$schema === CANONICAL_SCHEMA_URL, `El $schema debe ser ${CANONICAL_SCHEMA_URL}.`);
   assert(typeof plan.id === 'string' && PLAN_ID_PATTERN.test(plan.id), 'El id del plan no es válido.');
   assert(isPositiveInteger(plan.version), 'version debe ser un entero mayor o igual que 1.');
   assert(typeof plan.title === 'string' && plan.title.trim(), 'title debe ser texto no vacío.');
@@ -63,7 +64,6 @@ function validatePlan(plan, expectedPlanId = null) {
     sectionIds.add(section.id);
     assert(typeof section.title === 'string' && section.title.trim(), `${path}.title debe ser texto no vacío.`);
     if (section.description !== undefined) assert(typeof section.description === 'string', `${path}.description debe ser texto.`);
-    assert(section.type === 'single', `${path}.type debe ser "single".`);
     assert(Array.isArray(section.options) && section.options.length >= 1 && section.options.length <= 2, `${path}.options debe contener una o dos opciones.`);
     assert(isPositiveInteger(section.defaultOption) && section.defaultOption <= section.options.length, `${path}.defaultOption debe coincidir con una opción existente.`);
     if (section.allowOther !== undefined) assert(typeof section.allowOther === 'boolean', `${path}.allowOther debe ser booleano.`);

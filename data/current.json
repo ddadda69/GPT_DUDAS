@@ -1,7 +1,7 @@
 {
-  "$schema": "./schema.json",
+  "$schema": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
   "id": "ejemplo-cache-api-consultas-2026-08-25",
-  "version": 1,
+  "version": 2,
   "title": "Ejemplo: añadir caché a una API de consultas",
   "description": "Plan ilustrativo para reducir la latencia y la carga sobre la base de datos sin cambiar el contrato público de la API. El objetivo del ejemplo es mostrar cómo Plan Viewer presenta una **decisión real** y conserva el resto del plan completo en Markdown.",
   "sections": [
@@ -9,7 +9,6 @@
       "id": "arquitectura-cache",
       "title": "1. Elegir la arquitectura de caché",
       "description": "Esta decisión cambia de forma importante la implementación y la operación, por lo que se presentan dos alternativas reales.",
-      "type": "single",
       "defaultOption": 1,
       "options": [
         {
@@ -29,7 +28,6 @@
     {
       "id": "contrato-cache",
       "title": "2. Definir el comportamiento de la caché",
-      "type": "single",
       "defaultOption": 1,
       "options": [
         {
@@ -44,7 +42,6 @@
     {
       "id": "implementacion",
       "title": "3. Implementar por capas",
-      "type": "single",
       "defaultOption": 1,
       "options": [
         {
@@ -59,7 +56,6 @@
     {
       "id": "pruebas-observabilidad",
       "title": "4. Verificar rendimiento y corrección",
-      "type": "single",
       "defaultOption": 1,
       "options": [
         {
@@ -74,7 +70,6 @@
     {
       "id": "despliegue-reversion",
       "title": "5. Desplegar de forma gradual y reversible",
-      "type": "single",
       "defaultOption": 1,
       "options": [
         {
@@ -88,4 +83,3 @@
     }
   ]
 }
-
