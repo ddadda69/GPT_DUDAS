@@ -1,7 +1,14 @@
 const REPOSITORY = 'ddadda69/GPT_DUDAS';
 const BRANCH = 'main';
-const LEGACY_PATH = 'data/current.json';
+const CURRENT_PATH = 'data/current.json';
+const CANONICAL_SCHEMA_URL = 'https://ddadda69.github.io/GPT_DUDAS/data/schema.json';
 const PLAN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const PLAN_KEYS = new Set(['$schema', 'id', 'version', 'title', 'description', 'sections']);
+const SECTION_KEYS = new Set([
+  'id', 'title', 'description', 'options', 'defaultOption',
+  'allowOther', 'allowNote', 'noteLabel', 'notePlaceholder'
+]);
+const OPTION_KEYS = new Set(['id', 'text', 'recommended']);
 
 const app = document.getElementById('app');
 const statusEl = document.getElementById('status');
@@ -9,17 +16,84 @@ const reloadBtn = document.getElementById('reload');
 const openJsonLink = document.getElementById('openJson');
 
 let currentPlan = null;
-let currentSha = '';
-let currentSource = null;
+let activeSource = null;
 
 if (window.marked) {
   window.marked.setOptions({ gfm: true, breaks: false });
 }
 
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function assertOnlyKeys(object, allowedKeys, path) {
+  const extra = Object.keys(object).filter(key => !allowedKeys.has(key));
+  assert(extra.length === 0, `${path} contiene campos no permitidos: ${extra.join(', ')}`);
+}
+
+function isPositiveInteger(value) {
+  return Number.isInteger(value) && value >= 1;
+}
+
+function validatePlan(plan, expectedPlanId = null) {
+  assert(isPlainObject(plan), 'El JSON raíz debe ser un objeto.');
+  assertOnlyKeys(plan, PLAN_KEYS, '$');
+  assert(plan.$schema === CANONICAL_SCHEMA_URL, `El $schema debe ser ${CANONICAL_SCHEMA_URL}.`);
+  assert(typeof plan.id === 'string' && PLAN_ID_PATTERN.test(plan.id), 'El id del plan no es válido.');
+  assert(isPositiveInteger(plan.version), 'version debe ser un entero mayor o igual que 1.');
+  assert(typeof plan.title === 'string' && plan.title.trim(), 'title debe ser texto no vacío.');
+  if (plan.description !== undefined) {
+    assert(typeof plan.description === 'string', 'description debe ser texto.');
+  }
+  assert(Array.isArray(plan.sections) && plan.sections.length > 0, 'sections debe ser una lista no vacía.');
+  if (expectedPlanId !== null) {
+    assert(plan.id === expectedPlanId, `El id del JSON ("${plan.id}") no coincide con el plan solicitado ("${expectedPlanId}").`);
+  }
+
+  const sectionIds = new Set();
+  plan.sections.forEach((section, sectionIndex) => {
+    const path = `sections[${sectionIndex}]`;
+    assert(isPlainObject(section), `${path} debe ser un objeto.`);
+    assertOnlyKeys(section, SECTION_KEYS, path);
+    assert(typeof section.id === 'string' && PLAN_ID_PATTERN.test(section.id), `${path}.id no es válido.`);
+    assert(!sectionIds.has(section.id), `${path}.id está duplicado.`);
+    sectionIds.add(section.id);
+    assert(typeof section.title === 'string' && section.title.trim(), `${path}.title debe ser texto no vacío.`);
+    if (section.description !== undefined) assert(typeof section.description === 'string', `${path}.description debe ser texto.`);
+    assert(Array.isArray(section.options) && section.options.length >= 1 && section.options.length <= 2, `${path}.options debe contener una o dos opciones.`);
+    assert(isPositiveInteger(section.defaultOption) && section.defaultOption <= section.options.length, `${path}.defaultOption debe coincidir con una opción existente.`);
+    if (section.allowOther !== undefined) assert(typeof section.allowOther === 'boolean', `${path}.allowOther debe ser booleano.`);
+    if (section.allowNote !== undefined) assert(typeof section.allowNote === 'boolean', `${path}.allowNote debe ser booleano.`);
+    if (section.noteLabel !== undefined) assert(typeof section.noteLabel === 'string', `${path}.noteLabel debe ser texto.`);
+    if (section.notePlaceholder !== undefined) assert(typeof section.notePlaceholder === 'string', `${path}.notePlaceholder debe ser texto.`);
+
+    const recommendedIds = [];
+    section.options.forEach((option, optionIndex) => {
+      const optionPath = `${path}.options[${optionIndex}]`;
+      assert(isPlainObject(option), `${optionPath} debe ser un objeto.`);
+      assertOnlyKeys(option, OPTION_KEYS, optionPath);
+      assert(option.id === optionIndex + 1, `${optionPath}.id debe ser exactamente ${optionIndex + 1}.`);
+      assert(typeof option.text === 'string' && option.text.trim(), `${optionPath}.text debe ser texto no vacío.`);
+      if (option.recommended !== undefined) assert(typeof option.recommended === 'boolean', `${optionPath}.recommended debe ser booleano.`);
+      if (option.recommended === true) recommendedIds.push(option.id);
+    });
+    assert(
+      recommendedIds.length === 1 && recommendedIds[0] === section.defaultOption,
+      `${path} debe tener exactamente una opción recommended=true y debe coincidir con defaultOption.`
+    );
+  });
+
+  return plan;
+}
+
 function resolvePlanSource() {
   const requestedPlanId = new URLSearchParams(window.location.search).get('plan');
   if (requestedPlanId === null || requestedPlanId === '') {
-    return { planId: null, path: LEGACY_PATH, legacy: true };
+    return { planId: null, path: CURRENT_PATH, isCurrent: true };
   }
   if (!PLAN_ID_PATTERN.test(requestedPlanId)) {
     throw new Error('El parámetro "plan" no es válido. Usa únicamente letras, números, punto, guion o guion bajo (máximo 128 caracteres).');
@@ -27,7 +101,7 @@ function resolvePlanSource() {
   return {
     planId: requestedPlanId,
     path: `data/plans/${requestedPlanId}.json`,
-    legacy: false,
+    isCurrent: false,
   };
 }
 
@@ -44,15 +118,15 @@ function githubBlobUrl(path) {
 }
 
 function updateSourceUi(source) {
-  currentSource = source;
+  activeSource = source;
   if (!openJsonLink) return;
   openJsonLink.href = githubBlobUrl(source.path);
-  openJsonLink.textContent = source.legacy ? 'Ver JSON actual' : 'Ver JSON del plan';
+  openJsonLink.textContent = source.isCurrent ? 'Ver JSON actual' : 'Ver JSON del plan';
 }
 
 function decodeBase64Utf8(base64) {
   const clean = String(base64 || '').replace(/\s/g, '');
-  const bytes = Uint8Array.from(atob(clean), c => c.charCodeAt(0));
+  const bytes = Uint8Array.from(atob(clean), char => char.charCodeAt(0));
   return new TextDecoder('utf-8').decode(bytes);
 }
 
@@ -63,20 +137,16 @@ function el(tag, className, text) {
   return node;
 }
 
-function sanitizeHtml(html) {
-  return window.DOMPurify ? window.DOMPurify.sanitize(html) : html;
-}
-
-function renderMarkdown(target, markdown) {
+function renderMarkdown(target, markdown, inline = false) {
   const source = String(markdown || '');
-  if (window.marked) target.innerHTML = sanitizeHtml(window.marked.parse(source));
-  else target.textContent = source;
-}
-
-function renderMarkdownInline(target, markdown) {
-  const source = String(markdown || '');
-  if (window.marked?.parseInline) target.innerHTML = sanitizeHtml(window.marked.parseInline(source));
-  else target.textContent = source;
+  if (!window.marked || !window.DOMPurify) {
+    target.textContent = source;
+    return;
+  }
+  const rendered = inline && window.marked.parseInline
+    ? window.marked.parseInline(source)
+    : window.marked.parse(source);
+  target.innerHTML = window.DOMPurify.sanitize(rendered);
 }
 
 function optionBadge(text, className) {
@@ -98,17 +168,17 @@ function setOptionText(textEl, text, recommended, modified, showRecommended) {
 }
 
 function radioId(sectionIndex, optionId) {
-  return `q-${sectionIndex}-${String(optionId).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+  return `q-${sectionIndex}-${optionId}`;
 }
 
-function createEditableOption(section, sectionIndex, option, inputType, checked, optionCount) {
+function createEditableOption(sectionIndex, option, checked, optionCount) {
   const row = el('div', 'option-row');
   row.dataset.optionId = String(option.id);
 
   const input = document.createElement('input');
-  input.type = inputType;
+  input.type = 'radio';
   input.className = 'choice';
-  input.name = inputType === 'radio' ? `q-${sectionIndex}` : `q-${sectionIndex}-${option.id}`;
+  input.name = `q-${sectionIndex}`;
   input.value = String(option.id);
   input.id = radioId(sectionIndex, option.id);
   input.checked = Boolean(checked);
@@ -122,8 +192,8 @@ function createEditableOption(section, sectionIndex, option, inputType, checked,
   }
 
   const textEl = el('div', 'option-text');
-  textEl.dataset.original = option.text || '';
-  setOptionText(textEl, option.text || '', Boolean(option.recommended), false, optionCount > 1);
+  textEl.dataset.original = option.text;
+  setOptionText(textEl, option.text, option.recommended === true, false, optionCount > 1);
   content.appendChild(textEl);
 
   const editBtn = el('button', 'edit-btn', 'Editar');
@@ -139,20 +209,26 @@ function createEditableOption(section, sectionIndex, option, inputType, checked,
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
-  const currentValue = () => textEl.dataset.custom || textEl.dataset.original || '';
+  const currentValue = () => textEl.dataset.custom ?? textEl.dataset.original;
 
-  const finishEdit = (save) => {
+  const finishEdit = save => {
     if (!editing) return;
-    const previous = currentValue();
-    const value = editArea.value;
 
-    if (save && value.trim()) {
-      textEl.dataset.custom = value;
+    if (save) {
+      const candidate = editArea.value;
+      if (!candidate.trim()) {
+        editArea.setCustomValidity('La opción no puede quedar vacía.');
+        editArea.reportValidity();
+        return;
+      }
+      editArea.setCustomValidity('');
+      if (candidate === textEl.dataset.original) delete textEl.dataset.custom;
+      else textEl.dataset.custom = candidate;
     }
 
-    const rendered = save && value.trim() ? value : previous;
-    const modified = Boolean(textEl.dataset.custom);
-    setOptionText(textEl, rendered, Boolean(option.recommended), modified, optionCount > 1);
+    const rendered = currentValue();
+    const modified = Object.hasOwn(textEl.dataset, 'custom');
+    setOptionText(textEl, rendered, option.recommended === true, modified, optionCount > 1);
 
     actions?.remove();
     actions = null;
@@ -190,6 +266,10 @@ function createEditableOption(section, sectionIndex, option, inputType, checked,
 
     saveBtn.addEventListener('click', () => finishEdit(true));
     cancelBtn.addEventListener('click', () => finishEdit(false));
+    editArea.addEventListener('keydown', event => {
+      if (event.key === 'Escape') finishEdit(false);
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) finishEdit(true);
+    });
 
     editArea.focus();
     editArea.setSelectionRange(editArea.value.length, editArea.value.length);
@@ -225,17 +305,17 @@ function createSkipOption(sectionIndex) {
   return row;
 }
 
-function createOtherOption(sectionIndex, inputType, defaultChecked) {
+function createOtherOption(sectionIndex) {
   const row = el('div', 'option-row other-row');
   row.dataset.optionId = '__other';
 
   const input = document.createElement('input');
-  input.type = inputType;
+  input.type = 'radio';
   input.className = 'choice other-choice';
-  input.name = inputType === 'radio' ? `q-${sectionIndex}` : `q-${sectionIndex}-other`;
+  input.name = `q-${sectionIndex}`;
   input.value = '__other';
   input.id = `q-${sectionIndex}-other`;
-  input.checked = Boolean(defaultChecked);
+  input.setAttribute('aria-label', 'Otra alternativa');
 
   const content = el('div', 'other-content');
   const label = el('label', 'option-kicker', 'Otra');
@@ -247,10 +327,6 @@ function createOtherOption(sectionIndex, inputType, defaultChecked) {
   otherInput.rows = 4;
   holder.appendChild(otherInput);
   content.append(label, holder);
-
-  const update = () => holder.classList.toggle('visible', input.checked);
-  input.addEventListener('change', update);
-  update();
   row.append(input, content);
   return row;
 }
@@ -268,58 +344,12 @@ function createNote(section) {
   return wrap;
 }
 
-function renderChoiceSection(card, section, sectionIndex, multiple) {
-  const inputType = multiple ? 'checkbox' : 'radio';
-  const defaults = multiple
-    ? new Set((section.defaultOptions || []).map(String))
-    : new Set(section.defaultOption !== undefined && section.defaultOption !== null ? [String(section.defaultOption)] : []);
-
-  const options = section.options || [];
-  options.forEach(option => {
-    const checked = defaults.has(String(option.id)) || Boolean(option.selected);
-    card.appendChild(createEditableOption(section, sectionIndex, option, inputType, checked, options.length));
-  });
-
-  if (!multiple) card.appendChild(createSkipOption(sectionIndex));
-  if (section.allowOther) card.appendChild(createOtherOption(sectionIndex, inputType, Boolean(section.defaultOther)));
-}
-
-function renderTextSection(card, section) {
-  const area = document.createElement('textarea');
-  area.className = 'free-text';
-  area.rows = section.rows || 4;
-  area.placeholder = section.placeholder || 'Escribe tu respuesta…';
-  area.value = section.defaultValue || '';
-  card.appendChild(area);
-}
-
-function renderBooleanSection(card, section, sectionIndex) {
-  const values = [
-    { value: 'true', label: section.trueLabel || 'Sí' },
-    { value: 'false', label: section.falseLabel || 'No' }
-  ];
-  const holder = el('div', 'boolean-holder');
-  values.forEach(item => {
-    const row = el('label', 'boolean-row');
-    const input = document.createElement('input');
-    input.type = 'radio';
-    input.className = 'boolean-choice';
-    input.name = `q-${sectionIndex}`;
-    input.value = item.value;
-    input.checked = section.default === (item.value === 'true');
-    row.append(input, document.createTextNode(item.label));
-    holder.appendChild(row);
-  });
-  card.appendChild(holder);
-}
-
 function renderSection(section, sectionIndex) {
   const card = el('section', 'card');
   card.dataset.sectionIndex = String(sectionIndex);
-  card.dataset.type = section.type || 'single';
 
   const title = el('h2', 'section-title');
-  renderMarkdownInline(title, section.title || `${sectionIndex + 1}. ${section.id || 'Decisión'}`);
+  renderMarkdown(title, section.title, true);
   card.appendChild(title);
 
   if (section.description) {
@@ -328,13 +358,16 @@ function renderSection(section, sectionIndex) {
     card.appendChild(description);
   }
 
-  switch (card.dataset.type) {
-    case 'multiple': renderChoiceSection(card, section, sectionIndex, true); break;
-    case 'text': renderTextSection(card, section); break;
-    case 'boolean': renderBooleanSection(card, section, sectionIndex); break;
-    case 'single':
-    default: renderChoiceSection(card, section, sectionIndex, false); break;
-  }
+  section.options.forEach(option => {
+    card.appendChild(createEditableOption(
+      sectionIndex,
+      option,
+      section.defaultOption === option.id,
+      section.options.length
+    ));
+  });
+  card.appendChild(createSkipOption(sectionIndex));
+  if (section.allowOther === true) card.appendChild(createOtherOption(sectionIndex));
 
   const note = createNote(section);
   if (note) card.appendChild(note);
@@ -343,58 +376,31 @@ function renderSection(section, sectionIndex) {
 
 function selectedOptionMarkdown(row) {
   const textEl = row?.querySelector('.option-text');
-  return textEl ? (textEl.dataset.custom || textEl.dataset.original || '') : '';
+  return textEl ? (textEl.dataset.custom ?? textEl.dataset.original ?? '') : '';
 }
 
 function buildOutput() {
   if (!currentPlan) return '';
-  const lines = [];
-  const id = currentPlan.id || 'plan';
-  const version = currentPlan.version !== undefined ? ` · v${currentPlan.version}` : '';
-  lines.push(`Plan: ${id}${version}`, '');
+  const lines = [`Plan: ${currentPlan.id} · v${currentPlan.version}`, ''];
 
   [...document.querySelectorAll('.card')].forEach((card, index) => {
-    const section = currentPlan.sections[index] || {};
-    const title = section.title || `${index + 1}. ${section.id || 'Decisión'}`;
-    lines.push(title);
-    const type = card.dataset.type;
+    const section = currentPlan.sections[index];
+    lines.push(section.title);
 
-    if (type === 'text') {
-      lines.push(`Respuesta: ${card.querySelector('.free-text')?.value.trim() || ''}`);
-    } else if (type === 'boolean') {
-      const selected = card.querySelector('.boolean-choice:checked');
-      lines.push(`Respuesta: ${selected ? (selected.value === 'true' ? section.trueLabel || 'Sí' : section.falseLabel || 'No') : 'Sin seleccionar'}`);
-    } else if (type === 'multiple') {
-      const selected = [...card.querySelectorAll('.choice:checked')];
-      const ids = selected.map(input => input.value === '__other' ? 'Otra' : input.value);
-      lines.push(`Respuesta: ${ids.length ? ids.join(', ') : 'Ninguna'}`);
-      selected.forEach(input => {
-        const row = input.closest('.option-row');
-        if (input.value === '__other') {
-          const value = row.querySelector('.other-input')?.value.trim();
-          if (value) lines.push(`Otra: ${value}`);
-        } else {
-          const custom = row.querySelector('.option-text')?.dataset.custom;
-          if (custom) lines.push('', `Opción ${input.value} editada:`, custom);
-        }
-      });
+    const selected = card.querySelector('.choice:checked');
+    if (!selected) {
+      lines.push('Decisión: Sin seleccionar');
+    } else if (selected.value === '__skip') {
+      lines.push('Decisión: No implementar');
+    } else if (selected.value === '__other') {
+      const value = selected.closest('.option-row').querySelector('.other-input')?.value.trim();
+      lines.push(`Decisión: Otra${value ? ` - ${value}` : ''}`);
     } else {
-      const selected = card.querySelector('.choice:checked');
-      if (!selected) {
-        lines.push('Decisión: Sin seleccionar');
-      } else if (selected.value === '__skip') {
-        lines.push('Decisión: No implementar');
-      } else if (selected.value === '__other') {
-        const value = selected.closest('.option-row').querySelector('.other-input')?.value.trim();
-        lines.push(`Decisión: Otra${value ? ` - ${value}` : ''}`);
-      } else {
-        const row = selected.closest('.option-row');
-        const optionCount = (section.options || []).length;
-        const custom = row.querySelector('.option-text')?.dataset.custom;
-        const label = optionCount === 1 ? 'Implementar' : `Opción ${selected.value}`;
-        lines.push(`Decisión: ${label}${custom ? ' (editada)' : ''}`);
-        if (custom) lines.push('', 'Contenido editado:', selectedOptionMarkdown(row));
-      }
+      const row = selected.closest('.option-row');
+      const custom = row.querySelector('.option-text')?.dataset.custom;
+      const label = section.options.length === 1 ? 'Implementar' : `Opción ${selected.value}`;
+      lines.push(`Decisión: ${label}${custom ? ' (editada)' : ''}`);
+      if (custom) lines.push('', 'Contenido editado:', selectedOptionMarkdown(row));
     }
 
     const note = card.querySelector('.note-input:not(.inline-markdown-editor)')?.value.trim();
@@ -406,26 +412,19 @@ function buildOutput() {
 }
 
 async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const area = document.createElement('textarea');
-    area.value = text;
-    document.body.appendChild(area);
-    area.select();
-    document.execCommand('copy');
-    area.remove();
+  if (!navigator.clipboard?.writeText) {
+    throw new Error('El navegador no ofrece acceso al portapapeles.');
   }
+  await navigator.clipboard.writeText(text);
 }
 
 function renderPlan(plan, sha) {
   currentPlan = plan;
-  currentSha = sha || '';
   app.textContent = '';
 
   const header = el('section', 'plan-header');
   const title = el('h1', 'plan-title');
-  renderMarkdownInline(title, plan.title || 'Plan de decisiones');
+  renderMarkdown(title, plan.title, true);
   header.appendChild(title);
 
   if (plan.description) {
@@ -434,14 +433,12 @@ function renderPlan(plan, sha) {
     header.appendChild(description);
   }
 
-  const metaParts = [];
-  if (plan.id) metaParts.push(plan.id);
-  if (plan.version !== undefined) metaParts.push(`v${plan.version}`);
-  if (currentSha) metaParts.push(`SHA ${currentSha.slice(0, 8)}`);
-  if (metaParts.length) header.appendChild(el('div', 'plan-meta', metaParts.join(' · ')));
+  const metaParts = [plan.id, `v${plan.version}`];
+  if (sha) metaParts.push(`SHA ${sha.slice(0, 8)}`);
+  header.appendChild(el('div', 'plan-meta', metaParts.join(' · ')));
   app.appendChild(header);
 
-  (plan.sections || []).forEach((section, index) => app.appendChild(renderSection(section, index)));
+  plan.sections.forEach((section, index) => app.appendChild(renderSection(section, index)));
 
   const actions = el('div', 'actions');
   const generateBtn = el('button', 'primary-btn', 'Generar respuesta');
@@ -466,10 +463,16 @@ function renderPlan(plan, sha) {
   generateBtn.addEventListener('click', refreshResult);
   copyBtn.addEventListener('click', async () => {
     const text = refreshResult();
-    await copyText(text);
-    const old = copyBtn.textContent;
-    copyBtn.textContent = 'Copiado ✓';
-    setTimeout(() => { copyBtn.textContent = old; }, 1000);
+    const original = copyBtn.textContent;
+    try {
+      await copyText(text);
+      copyBtn.textContent = 'Copiado ✓';
+    } catch (error) {
+      console.error(error);
+      copyBtn.textContent = 'No se pudo copiar';
+    } finally {
+      setTimeout(() => { copyBtn.textContent = original; }, 1400);
+    }
   });
 }
 
@@ -481,10 +484,25 @@ function renderError(error, path) {
   app.appendChild(card);
 }
 
+function describeHttpError(response, source) {
+  if (response.status === 404 && source.planId) {
+    return `No existe el plan "${source.planId}" en main.`;
+  }
+  if (response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0') {
+    const resetSeconds = Number(response.headers.get('x-ratelimit-reset'));
+    if (Number.isFinite(resetSeconds)) {
+      return `GitHub API ha alcanzado su límite temporal. Se restablece aproximadamente a las ${new Date(resetSeconds * 1000).toLocaleTimeString()}.`;
+    }
+    return 'GitHub API ha alcanzado su límite temporal de consultas.';
+  }
+  return `GitHub API respondió HTTP ${response.status}.`;
+}
+
 async function loadPlan() {
   statusEl.textContent = 'Consultando main…';
   reloadBtn.disabled = true;
-  currentSource = null;
+  activeSource = null;
+
   try {
     const source = resolvePlanSource();
     updateSourceUi(source);
@@ -494,33 +512,23 @@ async function loadPlan() {
       cache: 'no-store',
       headers: { Accept: 'application/vnd.github+json' }
     });
-    if (!response.ok) {
-      if (response.status === 404 && source.planId) {
-        throw new Error(`No existe el plan "${source.planId}" en main.`);
-      }
-      throw new Error(`GitHub API respondió HTTP ${response.status}`);
-    }
+    if (!response.ok) throw new Error(describeHttpError(response, source));
 
     const file = await response.json();
     if (!file.content) throw new Error('GitHub no devolvió el contenido del JSON.');
-    const jsonText = decodeBase64Utf8(file.content);
-    const plan = JSON.parse(jsonText);
-    if (!Array.isArray(plan.sections)) throw new Error('El JSON debe contener un array "sections".');
-    if (source.planId && plan.id !== source.planId) {
-      throw new Error(`El id del JSON ("${plan.id || ''}") no coincide con el plan solicitado ("${source.planId}").`);
-    }
+    const plan = validatePlan(JSON.parse(decodeBase64Utf8(file.content)), source.planId);
 
-    renderPlan(plan, file.sha);
-    document.title = `${plan.title || 'Plan Viewer'} · Plan Viewer`;
+    renderPlan(plan, file.sha || '');
+    document.title = `${plan.title} · Plan Viewer`;
     const sourceLabel = source.planId || 'current';
     statusEl.textContent = `${sourceLabel} · SHA ${String(file.sha || '').slice(0, 8)} · ${new Date().toLocaleTimeString()}`;
   } catch (error) {
     statusEl.textContent = 'Error';
-    if (!currentSource && openJsonLink) {
+    if (!activeSource && openJsonLink) {
       openJsonLink.removeAttribute('href');
       openJsonLink.textContent = 'Ver JSON';
     }
-    renderError(error, currentSource?.path);
+    renderError(error, activeSource?.path);
   } finally {
     reloadBtn.disabled = false;
   }

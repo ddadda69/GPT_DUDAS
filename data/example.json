@@ -1,14 +1,13 @@
 {
-  "$schema": "./schema.json",
+  "$schema": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
   "id": "plantilla-plan-chatgpt",
-  "version": 2,
+  "version": 1,
   "title": "Plan de ejemplo con estilo de respuesta normal",
-  "description": "La idea es que el contenido principal del visor sea el mismo que ChatGPT habría escrito en el chat, pero con controles para decidir, editar y añadir notas.",
+  "description": "El contenido principal del Viewer debe ser el mismo que ChatGPT habría escrito en el chat. La interfaz solo añade controles para decidir, editar y dejar notas.",
   "sections": [
     {
       "id": "mejora-sin-alternativas",
       "title": "1. Mejora sin alternativas reales",
-      "type": "single",
       "defaultOption": 1,
       "options": [
         {
@@ -24,8 +23,7 @@
     {
       "id": "mejora-con-decision-real",
       "title": "2. Mejora con dos alternativas reales",
-      "description": "Solo añade varias opciones cuando de verdad cambiarían la implementación.",
-      "type": "single",
+      "description": "Solo añade una segunda opción cuando cambia de forma relevante la implementación.",
       "defaultOption": 1,
       "options": [
         {
@@ -38,7 +36,7 @@
           "text": "**Alternativa real.** Inclúyela únicamente si es razonable y cambia de forma relevante la implementación."
         }
       ],
-      "allowOther": false,
+      "allowOther": true,
       "allowNote": true
     }
   ]

@@ -1,4 +1,4 @@
 interface:
   display_name: "Plan Viewer"
-  short_description: "Publica planes interactivos aislados por ID"
-  default_prompt: "Usa $plan-viewer para preparar y publicar un plan de implementacion."
+  short_description: "Publica planes interactivos seguros por ID"
+  default_prompt: "Usa $plan-viewer para preparar, validar y publicar un plan de implementación."

@@ -2,7 +2,7 @@
 
 Esta carpeta contiene una copia completa y restaurable de la habilidad personal `plan-viewer`, actualizada el **25 de agosto de 2026**.
 
-La copia no se activa dentro de este repositorio: está deliberadamente guardada en `skill-backups/` y no en `.agents/skills/`. Tampoco se ejecuta por sí sola ni contiene credenciales.
+La copia está deliberadamente fuera de `.agents/skills/`, no se activa por sí sola y no contiene credenciales.
 
 ## Contenido
 
@@ -20,59 +20,62 @@ skill/
 
 ## Restauración
 
-### Opción 1: Skill Installer
+### Skill Installer
 
-Desde Codex, solicita:
+Desde Codex:
 
 ```text
 $skill-installer instala la habilidad desde ddadda69/GPT_DUDAS,
 ruta skill-backups/plan-viewer/skill, rama main
 ```
 
-### Opción 2: copia manual
+### Copia manual
 
-1. Descarga la carpeta `skill` de este respaldo desde `main`.
-2. Crea la carpeta personal de habilidades si no existe.
-3. Copia el contenido de `skill` en:
+1. Descarga `skill-backups/plan-viewer/skill` desde `main`.
+2. Copia su contenido en:
 
 ```text
 Windows: %USERPROFILE%\.agents\skills\plan-viewer
 macOS/Linux: $HOME/.agents/skills/plan-viewer
 ```
 
-4. Reinicia Codex o la aplicación de escritorio si la habilidad no aparece inmediatamente.
+3. Reinicia Codex o ChatGPT si la habilidad no aparece inmediatamente.
 
-## Uso después de restaurarla
+## Uso
 
-- En Codex: `$plan-viewer`.
-- En ChatGPT de escritorio: `@Plan Viewer` cuando la interfaz permita seleccionar la habilidad.
-- También puede activarse automáticamente cuando se pide un plan complejo, una propuesta de implementación o un refactor importante y el entorno admite habilidades personales.
+- Codex: `$plan-viewer`.
+- ChatGPT: `@Plan Viewer` cuando la interfaz permita seleccionar la habilidad.
+- Puede activarse automáticamente para planes complejos cuando el entorno admita habilidades personales.
 
 ## Publicación actual
 
 - Repositorio: `ddadda69/GPT_DUDAS`.
 - Rama: `main`.
 - Esquema autoritativo: `data/schema.json`.
-- Cada plan normal se publica de forma canónica en `data/plans/<id>.json`.
+- Archivo canónico: `data/plans/<id>.json`.
 - URL estable: `https://ddadda69.github.io/GPT_DUDAS/?plan=<id>`.
-- `data/current.json` es un espejo de conveniencia: sin `?plan=` el Viewer carga ese archivo y normalmente muestra el último plan publicado correctamente.
-- La habilidad captura el SHA de `current.json` al empezar a preparar el plan y solo actualiza el espejo si ese SHA sigue vigente; un cambio concurrente nunca se sobrescribe a la fuerza.
-- Una actualización de un plan existente exige leer primero el SHA de su archivo concreto y escribir usando ese SHA.
+- `data/current.json` refleja el último plan en el caso normal y alimenta la URL raíz.
+- El archivo canónico y `current.json` se actualizan con control optimista de SHA; nunca se fuerzan conflictos.
 
-## Dependencias y permisos
+## Contrato
 
-- Requiere una conexión de GitHub autenticada exactamente como `ddadda69` con permiso de escritura en el repositorio.
-- `scripts/validate_plan.py` funciona con Python 3 y no necesita paquetes externos.
-- Si Python no está disponible, `SKILL.md` define una validación manual obligatoria antes de publicar.
-- No se incluyen tokens, claves, contraseñas ni credenciales.
+La versión actual no mantiene formatos históricos ni usa un campo `type`. Cada sección contiene una o dos opciones, numeradas consecutivamente desde 1, y debe existir exactamente una `recommended: true` que coincida con `defaultOption`.
 
-## Prueba rápida tras restaurar
+`$schema` debe ser exactamente `https://ddadda69.github.io/GPT_DUDAS/data/schema.json`.
 
-1. Pide un plan sencillo usando `$plan-viewer`.
-2. Comprueba que se cree un archivo nuevo bajo `data/plans/`.
-3. Comprueba que `data/current.json` contenga exactamente el mismo plan si no hubo concurrencia.
-4. Abre la URL raíz y verifica que muestra ese plan; abre también la URL estable con `?plan=<id>`.
-5. Actualiza el mismo plan y verifica que mantiene `id`, incrementa `version` y actualiza tanto el archivo aislado como `current.json` en el caso normal.
-6. Para probar concurrencia, inicia dos publicaciones desde el mismo estado de `current.json`: ambas deben conservar sus archivos aislados y como máximo una debe poder actualizar el espejo con el SHA inicial.
+## Dependencias
 
-Documentación oficial: https://learn.chatgpt.com/docs/build-skills
+- GitHub debe estar autenticado exactamente como `ddadda69` para publicar.
+- `scripts/validate_plan.py` usa Python 3 sin paquetes externos.
+- Si Python no está disponible, `SKILL.md` obliga a validar manualmente el contrato remoto antes de publicar.
+
+## Prueba rápida
+
+1. Pide un plan usando `$plan-viewer`.
+2. Comprueba que crea `data/plans/<id>.json` y que el JSON cumple el esquema remoto.
+3. Sin concurrencia, verifica que `data/current.json` contiene exactamente el mismo plan.
+4. Abre la URL raíz y la URL estable con `?plan=<id>`.
+5. Actualiza el mismo plan: debe conservar `id`, incrementar `version` en uno y usar el SHA remoto del archivo canónico.
+6. Publica desde dos chats partiendo del mismo `current.json`: ambos planes canónicos deben sobrevivir y como máximo uno debe poder reemplazar el espejo con el SHA inicial.
+
+Documentación oficial de plugins y skills: https://developers.openai.com/plugins/llms.txt
