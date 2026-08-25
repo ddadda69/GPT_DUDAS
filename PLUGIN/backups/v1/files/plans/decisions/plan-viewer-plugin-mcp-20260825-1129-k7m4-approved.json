@@ -1,0 +1,32 @@
+{
+  "submissionId": "02d02e9e-12bf-4587-bf05-3f5baf9d85fe",
+  "planId": "plan-viewer-plugin-mcp-20260825-1129-k7m4",
+  "planVersion": 1,
+  "decisions": [
+    {
+      "sectionId": "arquitectura-plugin",
+      "kind": "option",
+      "optionId": 1
+    },
+    {
+      "sectionId": "contrato-tools",
+      "kind": "option",
+      "optionId": 1
+    },
+    {
+      "sectionId": "componente-ui",
+      "kind": "option",
+      "optionId": 1
+    },
+    {
+      "sectionId": "persistencia",
+      "kind": "option",
+      "optionId": 1
+    },
+    {
+      "sectionId": "entrega-pruebas",
+      "kind": "option",
+      "optionId": 1
+    }
+  ]
+}
