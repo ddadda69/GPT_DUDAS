@@ -1,0 +1,5 @@
+interface:
+  display_name: "Plan Viewer"
+  short_description: "Publica planes interactivos y validados"
+  default_prompt: "Usa $plan-viewer para preparar y publicar un plan de implementacion."
+

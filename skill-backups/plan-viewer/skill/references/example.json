@@ -1,0 +1,46 @@
+{
+  "$schema": "./schema.json",
+  "id": "plantilla-plan-chatgpt",
+  "version": 2,
+  "title": "Plan de ejemplo con estilo de respuesta normal",
+  "description": "La idea es que el contenido principal del visor sea el mismo que ChatGPT habría escrito en el chat, pero con controles para decidir, editar y añadir notas.",
+  "sections": [
+    {
+      "id": "mejora-sin-alternativas",
+      "title": "1. Mejora sin alternativas reales",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Explica aquí la mejora **completa**, igual que en una respuesta normal.\n\n- Puede contener listas.\n- Puede usar `código inline`.\n- Puede incluir explicaciones largas.\n\n```python\ndef ejemplo():\n    return \"También admite bloques de código\"\n```\n\n**Dificultad:** alta.  \n**Impacto:** alto."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true,
+      "notePlaceholder": "Añade un matiz para este punto…"
+    },
+    {
+      "id": "mejora-con-decision-real",
+      "title": "2. Mejora con dos alternativas reales",
+      "description": "Solo añade varias opciones cuando de verdad cambiarían la implementación.",
+      "type": "single",
+      "defaultOption": 1,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "**Opción recomendada.** Explica la solución completa, sus ventajas y las consecuencias de elegirla."
+        },
+        {
+          "id": 2,
+          "text": "**Alternativa real.** Inclúyela únicamente si es razonable y cambia de forma relevante la implementación."
+        }
+      ],
+      "allowOther": false,
+      "allowNote": true
+    }
+  ]
+}
+
