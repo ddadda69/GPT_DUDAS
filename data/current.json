@@ -1,24 +1,67 @@
 {
   "$schema": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
-  "id": "ejemplo-simple-20260826-004500-p7q2",
+  "id": "ejemplo-buscador-20260826-0033-r4m8",
   "version": 1,
-  "title": "Ejemplo simple: crear una página de bienvenida",
-  "description": "Un plan mínimo para demostrar cómo Plan Viewer presenta una propuesta sencilla sin inventar alternativas innecesarias.",
+  "title": "Ejemplo: mejorar un buscador de proyectos",
+  "description": "Ejemplo algo más completo para probar decisiones con una y dos opciones, recomendaciones, notas y la opción Otra.",
   "sections": [
     {
-      "id": "pagina-bienvenida",
-      "title": "1. Crear una página de bienvenida mínima",
-      "defaultOption": 1,
+      "id": "busqueda-instantanea",
+      "title": "1. Hacer la búsqueda más rápida al escribir",
+      "description": "Evitar lanzar trabajo innecesario con cada pulsación y mantener una respuesta fluida.",
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Crear una página de bienvenida sencilla con:\n\n- un título claro;\n- una frase breve que explique el propósito del sitio;\n- un botón **Comenzar** que lleve a la pantalla principal.\n\nReutilizar los colores y estilos existentes para que la nueva página encaje con el resto del producto. Después, comprobar que se vea correctamente tanto en escritorio como en móvil y que el botón abra el destino esperado.\n\n**Resultado:** una entrada clara al sitio, fácil de entender y sin añadir complejidad innecesaria."
+          "text": "Aplicar un **debounce de 250 ms** y cancelar la búsqueda anterior cuando el usuario siga escribiendo. Es la opción más equilibrada: mantiene sensación de respuesta inmediata y reduce consultas repetidas."
+        },
+        {
+          "id": 2,
+          "text": "Buscar únicamente al pulsar **Enter** o el botón Buscar. Reduce todavía más el trabajo, pero hace la interacción menos directa para consultas rápidas."
         }
       ],
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "noteLabel": "Nota",
+      "notePlaceholder": "Por ejemplo: prefiero 400 ms o quiero buscar desde 3 caracteres…"
+    },
+    {
+      "id": "estado-vacio",
+      "title": "2. Mejorar el estado sin resultados",
+      "description": "Aquí no hay una decisión técnica relevante: se propone directamente el comportamiento más útil.",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Cuando no haya coincidencias, mostrar el texto buscado, indicar que no se encontraron proyectos y ofrecer una acción **Limpiar búsqueda**. Si existen filtros activos, mostrarlos también para que sea evidente por qué puede no haber resultados."
+        }
+      ],
+      "defaultOption": 1,
       "allowOther": false,
       "allowNote": true,
-      "notePlaceholder": "Añade un matiz para este ejemplo…"
+      "notePlaceholder": "Añade cualquier matiz para este punto…"
+    },
+    {
+      "id": "persistencia-filtros",
+      "title": "3. Decidir si los filtros sobreviven al cerrar la aplicación",
+      "description": "Las dos alternativas son razonables y cambian la experiencia del usuario.",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Guardar los filtros usados por cada usuario y restaurarlos en la siguiente sesión. Conviene cuando normalmente se trabaja repetidamente con el mismo subconjunto de proyectos."
+        },
+        {
+          "id": 2,
+          "text": "Reiniciar siempre los filtros al abrir la aplicación. Es más predecible y evita que un filtro antiguo haga pensar que faltan proyectos."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "noteLabel": "Nota",
+      "notePlaceholder": "Puedes indicar excepciones o una tercera estrategia…"
     }
   ]
 }
