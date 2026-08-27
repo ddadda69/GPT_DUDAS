@@ -1,67 +1,182 @@
 {
   "$schema": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
-  "id": "ejemplo-buscador-20260826-0033-r4m8",
+  "id": "bddiagram-schema-sync-final-20260827",
   "version": 1,
-  "title": "Ejemplo: mejorar un buscador de proyectos",
-  "description": "Ejemplo algo más completo para probar decisiones con una y dos opciones, recomendaciones, notas y la opción Otra.",
+  "title": "BD Diagram · sincronización estructural y versión definitiva",
+  "description": "Plan restante después de corregir la regresión del layout ortogonal y añadir la importación aditiva selectiva por componente. El objetivo es que DDL, Oracle y el esquema interno compartan un único modelo de cambios, que **nuevo / cambiado / eliminado / local** sea inequívoco y que una FK o tabla nueva pueda incorporarse al árbol de relaciones de forma controlada. No incluye rehacer el radial, que debe permanecer aislado.",
   "sections": [
     {
-      "id": "busqueda-instantanea",
-      "title": "1. Hacer la búsqueda más rápida al escribir",
-      "description": "Evitar lanzar trabajo innecesario con cada pulsación y mantener una respuesta fluida.",
+      "id": "motor-delta-unico",
+      "title": "1. Unificar el motor de diferencias de esquema",
+      "description": "Ahora existen `SchemaDatabaseComparison` para Oracle y `SchemaImportDelta` para importación aditiva. Comparten gran parte del concepto, pero tienen políticas distintas.",
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Aplicar un **debounce de 250 ms** y cancelar la búsqueda anterior cuando el usuario siga escribiendo. Es la opción más equilibrada: mantiene sensación de respuesta inmediata y reduce consultas repetidas."
-        },
-        {
-          "id": 2,
-          "text": "Buscar únicamente al pulsar **Enter** o el botón Buscar. Reduce todavía más el trabajo, pero hace la interacción menos directa para consultas rápidas."
+          "text": "Extraer un **`SchemaDiffEngine` único** que calcule diferencias neutrales y separar la política de aplicación en `PARTIAL_ADDITIVE` y `AUTHORITATIVE`. El delta debe producir cambios tipados para objeto, columna, PK, UK, FK y vista, además de dependencias entre cambios. `Importar…` usará política aditiva; `Comparar con Oracle` y el futuro DDL completo usarán política autoritativa. Esto evita que dos comparadores evolucionen de forma distinta y permite reutilizar exactamente la misma UI, tests y reglas de reconciliación.\n\nCriterios: resultado determinista; matching case-insensitive de identificadores Oracle; FK estructural equivalente no se duplica; los elementos locales nunca se eliminan por una fuente externa; no se aplica ningún cambio imposible por dependencias desmarcadas."
         }
       ],
       "defaultOption": 1,
       "allowOther": true,
       "allowNote": true,
       "noteLabel": "Nota",
-      "notePlaceholder": "Por ejemplo: prefiero 400 ms o quiero buscar desde 3 caracteres…"
+      "notePlaceholder": "Reglas especiales de comparación que quieras conservar…"
     },
     {
-      "id": "estado-vacio",
-      "title": "2. Mejorar el estado sin resultados",
-      "description": "Aquí no hay una decisión técnica relevante: se propone directamente el comportamiento más útil.",
+      "id": "ddl-parcial-autoritativo",
+      "title": "2. Diferenciar explícitamente DDL parcial y DDL autoritativo",
+      "description": "Un fichero DDL puede ser un fragmento de dos tablas o una fotografía completa. Interpretar ambos igual es peligroso para las bajas.",
       "options": [
         {
           "id": 1,
           "recommended": true,
-          "text": "Cuando no haya coincidencias, mostrar el texto buscado, indicar que no se encontraron proyectos y ofrecer una acción **Limpiar búsqueda**. Si existen filtros activos, mostrarlos también para que sea evidente por qué puede no haber resultados."
-        }
-      ],
-      "defaultOption": 1,
-      "allowOther": false,
-      "allowNote": true,
-      "notePlaceholder": "Añade cualquier matiz para este punto…"
-    },
-    {
-      "id": "persistencia-filtros",
-      "title": "3. Decidir si los filtros sobreviven al cerrar la aplicación",
-      "description": "Las dos alternativas son razonables y cambian la experiencia del usuario.",
-      "options": [
-        {
-          "id": 1,
-          "recommended": true,
-          "text": "Guardar los filtros usados por cada usuario y restaurarlos en la siguiente sesión. Conviene cuando normalmente se trabaja repetidamente con el mismo subconjunto de proyectos."
+          "text": "Mantener **dos modos explícitos en la UI**. `Importar / ampliar` será el predeterminado: permite `+` y `~`, muestra `−` pero nunca borra. Añadir una opción avanzada `Sincronizar con este DDL como esquema completo`: en este modo `−` pasa a ser seleccionable y se aplica mediante el mismo pipeline autoritativo que Oracle. Antes de confirmar una baja se mostrará el impacto sobre nodos, consultas, filtros, parámetros, lentes y relaciones manuales. Nunca inferir que un DDL es completo por su nombre o tamaño."
         },
         {
           "id": 2,
-          "text": "Reiniciar siempre los filtros al abrir la aplicación. Es más predecible y evita que un filtro antiguo haga pensar que faltan proyectos."
+          "text": "No añadir modo autoritativo para DDL y reservar las eliminaciones exclusivamente para `Comparar con Oracle`. Es más simple, pero impide sincronizar de forma completa cuando el origen de verdad es un DDL versionado y no una conexión accesible."
         }
       ],
       "defaultOption": 1,
       "allowOther": true,
       "allowNote": true,
       "noteLabel": "Nota",
-      "notePlaceholder": "Puedes indicar excepciones o una tercera estrategia…"
+      "notePlaceholder": "Cuándo consideras un DDL fuente de verdad…"
+    },
+    {
+      "id": "modelo-estructural-ampliado",
+      "title": "3. Ampliar qué componentes estructurales conoce realmente el `.bddiagram`",
+      "description": "Hoy el modelo entiende tabla/vista, columna, PK, UK, FK y SQL de vista. Por eso no puede detectar correctamente índices, CHECK, defaults o identity aunque la UI los pida.",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Ampliar primero el **núcleo relacional útil para investigar datos**: nombre y propiedades físicas de PK/UK/FK, `CHECK`, índices normales/únicos y sus columnas/orden, `DEFAULT`, columnas `IDENTITY`/generated y comentarios de tabla/columna. Extender de forma coordinada `SchemaModel`, parser DDL, `OracleMetadataService`, exportador DDL, persistencia y comparador. Hacer un bump de formato documentado y tests de round-trip.\n\nNo modelar algo solo para mostrarlo: cada componente nuevo debe poder importarse, persistirse, compararse, exportarse y mostrarse en el esquema interno."
+        },
+        {
+          "id": 2,
+          "text": "Modelar desde el mismo cambio también secuencias, triggers, sinónimos y demás objetos Oracle. Daría una fotografía más completa, pero aumenta mucho el alcance y mezcla componentes que afectan a relaciones/identidad con objetos de comportamiento que requieren otra UI y otras reglas de dependencia."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "noteLabel": "Nota",
+      "notePlaceholder": "Componentes Oracle que para tu trabajo tengan prioridad…"
+    },
+    {
+      "id": "centro-cambios-ui",
+      "title": "4. Convertir Importar y Comparar en un único centro de cambios estructurales",
+      "description": "La información debe entenderse sin depender del color y sin abrir varias ventanas para saber qué va a pasar.",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Crear un **`SchemaChangesDialog` reutilizable** con el mismo lenguaje en DDL y Oracle: `+ nuevo`, `~ cambiado`, `− eliminado/ausente`, `• local`. Columnas: Elemento, Actual, Origen, Acción e Impacto. Filtros por texto, estado y tipo (`Tabla`, `Columna`, `PK/UK`, `FK`, `Índice`, etc.); `Recomendados`, marcar grupo y desmarcar; panel de detalle completo; búsqueda por nombre de constraint/columna; iconos propios del plugin y no solo colores.\n\nEl resumen superior debe ser del tipo `+4 · ~7 · −2 · •3 · 9/13 seleccionados`. Una selección dependiente imposible se desmarca con una explicación visible, no silenciosamente."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "noteLabel": "Nota",
+      "notePlaceholder": "Información que quieras ver siempre en esta pantalla…"
+    },
+    {
+      "id": "adopcion-nuevas-tablas-fk",
+      "title": "5. Decidir qué hacer en el diagrama con tablas y FK recién incorporadas",
+      "description": "Importar una FK al esquema no equivale necesariamente a querer una nueva ruta visual. Hoy esa diferencia puede resultar poco evidente.",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Después de aplicar el delta, mostrar una etapa **`Incorporar al diagrama`** solo si hay objetos o FK nuevos relevantes. Para cada tabla nueva ofrecer: `conectar por una FK disponible`, `mantener como raíz independiente` o `dejar solo en el esquema`. Para cada FK nueva entre nodos ya presentes: `crear ruta FK`, `dejar disponible sin ruta`. Preseleccionar únicamente opciones inequívocas; si existen varias FK posibles, pedir elección.\n\nLa previsualización debe enseñar qué nodo/ruta se creará y no reorganizar todo el lienzo salvo que el usuario elija Organizar. Las rutas nuevas deben entrar en undo/redo como una sola operación junto con la importación."
+        },
+        {
+          "id": 2,
+          "text": "Mantener la separación actual: importar solo modifica el esquema y el usuario añade posteriormente las rutas desde `Añadir ruta FK hija…`. Es más conservador, pero obliga a recordar qué constraint era nueva y hace que la importación aporte menos al flujo de trabajo inmediato."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "noteLabel": "Nota",
+      "notePlaceholder": "Reglas para decidir cuándo una FK debe convertirse en ruta…"
+    },
+    {
+      "id": "impacto-reconciliacion",
+      "title": "6. Previsualizar el impacto antes de cambios destructivos o incompatibles",
+      "description": "Una baja de columna/FK puede afectar mucho más que al `SchemaModel`.",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Extender `SchemaExplorationReconciler`/`SchemaEditImpact` para producir un **impacto navegable antes de aplicar**: nodos que desaparecerán, rutas que quedarán inválidas, columnas visibles/ordenadas que se retirarán, filtros, parámetros, enlaces de parámetros, consultas guardadas, lentes y relaciones manuales afectadas. El diálogo de cambios mostrará este impacto por fila y un resumen global.\n\nUna FK física eliminada que esté siendo usada ofrecerá explícitamente `convertir la ruta en relación lógica` cuando sea viable; nunca cambiarla silenciosamente. Toda sincronización se aplicará de forma transaccional sobre una copia, se validará y solo después sustituirá el documento actual."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "noteLabel": "Nota",
+      "notePlaceholder": "Elementos del diagrama que quieras proteger especialmente…"
+    },
+    {
+      "id": "baseline-drift",
+      "title": "7. Poder ver después qué cambió desde la última sincronización",
+      "description": "El usuario no debería tener que recordar qué era nuevo una vez cerrada la ventana de comparación.",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Guardar en el documento una **baseline estructural ligera** de la última importación/sincronización aceptada (fingerprints por componente, no datos de filas). `Esquema interno` podrá mostrar badges `nuevo`, `cambiado`, `ausente` respecto a esa baseline y un contador discreto en la barra. Añadir `Marcar estado actual como baseline` y `Ver cambios desde baseline`. Las marcas son informativas y no alteran el layout ni la ejecución."
+        },
+        {
+          "id": 2,
+          "text": "No persistir baseline; mostrar diferencias únicamente mientras está abierta la comparación actual. Reduce formato/persistencia, pero al cerrar se pierde la referencia visual de qué se acaba de incorporar o qué sigue pendiente."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "noteLabel": "Nota",
+      "notePlaceholder": "Cuándo debería actualizarse automáticamente la baseline…"
+    },
+    {
+      "id": "layout-fail-safe",
+      "title": "8. Convertir el auto-layout en una operación que nunca pueda inutilizar el diagrama",
+      "description": "La regresión de canvas vacío ha demostrado que un fallo de presentación necesita aislamiento adicional aunque existan SelfTests.",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Mantener el **fallback seguro** ya añadido y completarlo con `LayoutDiagnostics`: validar que aparecen todos los nodos, tamaños válidos, coordenadas razonables y ausencia de solapes graves antes de sustituir posiciones. Si falla el algoritmo solicitado, conservar preferentemente las últimas posiciones válidas; si no existen, usar el layout compacto. Mostrar en la barra `No se pudo aplicar Vertical; se conservaron las posiciones` y registrar el motivo técnico.\n\nCrear un corpus headless con árboles profundos, ciclos, múltiples raíces, FK manuales, high-fanout, ramas asimétricas y el patrón BDC de las capturas. Radial debe permanecer en su motor independiente."
+        },
+        {
+          "id": 2,
+          "text": "Mantener fallback silencioso a Compacto cuando falle Vertical/Horizontal. Es menos UI, pero puede hacer creer que el algoritmo solicitado funcionó cuando en realidad se aplicó otro layout."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "noteLabel": "Nota",
+      "notePlaceholder": "Comportamiento que prefieres cuando organizar falla…"
+    },
+    {
+      "id": "validacion-definitiva",
+      "title": "9. Matriz de regresión para considerar definitiva la versión",
+      "description": "La salida debe probar flujos completos y no únicamente métodos aislados.",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Añadir SelfTests y pruebas PDE para: DDL parcial sin bajas; DDL autoritativo con bajas seleccionadas; tabla/columna/PK/UK/FK nuevas y modificadas; dependencia desmarcada; FK usada convertida a lógica; componentes locales protegidos; modelo ampliado round-trip DDL→modelo→persistencia→DDL; comparación Oracle; undo/redo de sincronización; rutas adoptadas tras importar; baseline; y layouts Vertical/Horizontal/Radial con 10, 300 y 5.000 nodos.\n\nCriterio de salida: ningún cambio de esquema puede dejar referencias huérfanas, ningún fallo de layout puede ocultar todos los nodos, y cada acción destructiva debe ser visible y explícitamente seleccionada antes de aplicarse."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "noteLabel": "Nota",
+      "notePlaceholder": "Casos reales adicionales que quieras convertir en regresión…"
     }
   ]
 }
