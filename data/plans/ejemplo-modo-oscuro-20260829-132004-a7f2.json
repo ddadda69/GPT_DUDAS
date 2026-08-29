@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
+  "id": "ejemplo-modo-oscuro-20260829-132004-a7f2",
+  "version": 1,
+  "title": "Ejemplo simple: añadir modo oscuro",
+  "description": "Un ejemplo mínimo para comprobar que Plan Viewer carga el plugin, publica un plan y permite revisarlo de forma interactiva.",
+  "sections": [
+    {
+      "id": "implementar-modo-oscuro",
+      "title": "1. Añadir el modo oscuro",
+      "description": "La mejora debe ser pequeña, visible y fácil de comprobar.",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Añadir un botón **Claro / Oscuro** en la cabecera. Al pulsarlo, la página cambiará una clase en el elemento raíz y guardará la preferencia en `localStorage`. Al volver a abrirla, se recuperará esa preferencia; si todavía no existe, se respetará la configuración del sistema con `prefers-color-scheme`.\n\n**Comprobación:** el cambio debe aplicarse sin recargar la página, mantenerse tras cerrarla y conservar contraste suficiente en texto, enlaces y botones."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true,
+      "noteLabel": "Nota",
+      "notePlaceholder": "Añade un matiz para este ejemplo…"
+    }
+  ]
+}
+
