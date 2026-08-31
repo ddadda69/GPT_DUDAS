@@ -1,0 +1,97 @@
+{
+  "$schema": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
+  "id": "orthogonal-hv-slot-wrap-20260901-h4v9",
+  "version": 1,
+  "title": "Vertical y Horizontal: empaquetar cada familia en su hueco, como ya hace Radial",
+  "description": "Push hecho: `fix/orthogonal-layout-organization` ya estaba al día en origin (`fd12d3a`). Radial funciona porque cada padre posee un sector y los hijos extra salen a anillos locales. El modo **Nuevo · prueba** de H/V no copia esa idea: mete hermanos envueltos en **capas globales** y luego los empuja con relajación, así que o se come la pantalla o mezcla familias. La corrección no es retocar pesos: es cambiar de modelo.",
+  "sections": [
+    {
+      "id": "diagnostico",
+      "title": "1. Qué hay hoy y por qué H/V falla con muchos hijos",
+      "description": "Antes de elegir algoritmo: el mapa real del código, no una receta genérica de grafos.",
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true,
+      "notePlaceholder": "Añade un caso concreto que hayas visto en el lienzo…",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "En esta rama hay **tres motores ortogonales** y uno radial. El selector Clásico/Nuevo es de sesión, no se guarda en el `.bddiagram`, y **solo aplica** con **Mantener separadas las ramas** activo. Horizontal no es un algoritmo distinto: es `transpose()` del resultado vertical.\n\n| Motor | Archivo | Idea |\n|---|---|---|\n| Radial | `RadialTreeLayout` + `RadialRingAllocator` | El padre tiene un **sector angular**. Hasta 8 hijos en un anillo; más hijos, anillos extra **de esa familia**. Colisión → se aumenta el radio, no se tira el nodo a un anillo global ajeno. |\n| Clásico | `ClassicOrthogonalTreeLayout` | Árbol de abajo arriba: cada hijo es un **rectángulo rígido** (él + descendientes). Si hay muchos, se parten en bandas y se apilan bajo el padre. Las familias no se mezclan. |\n| Nuevo | `BalancedOrthogonalTreeLayout` | Sugiyama casero: **rangos globales**, bandas de hermanos como filas extra del árbol entero, proyección isotónica y **8 pases de relajación** (25 % posición actual, 55 % padre/hijos, 20 % huella reservada). |\n| Compacto | `DiagramAutoLayout.compact` | Capas por profundidad real, sin hueco de rama. Fuera del A/B. |\n\nEl radial acierta el caso que te molesta. Un padre con 20–80 hijos no abre un anillo enorme: parte la familia en anillos y **cada nieto sigue en el sector de su padre**.\n\nEl **Nuevo** hace lo contrario:\n\n1. **Capas globales.** Envolver 7 hijos con capacidad 6 no crea un bloque bajo ese padre. Sube a unos hermanos de rango y baja a otros, y **todos los nodos de ese rango comparten la misma fila del diagrama**. Ahí se mezclan hijos de A con nietos de B.\n2. **Relajación.** Esos 8 pases buscan un compromiso entre no solapar, quedar bajo el padre y respetar una huella reservada. Con fan-out alto el compromiso se ve como “los ha tirado ahí”.\n3. **Los tests lo piden.** `assertAsymmetricBranchesDoNotWait` exige que la rama corta **no espere** a terminar todas las bandas de la rama ancha: la mezcla de profundidades es una *feature* del Nuevo, no un accidente.\n\nEl **Clásico** no mezcla familias, pero el tamaño se dispara por otra vía: empaqueta **cajas de subárbol ya anchas** y decide cuántos caben por **número de hijos**, no por píxeles. Siete hijos con nietos anchos pueden dejar dos cajas de ~1700 px en la misma banda → el lienzo explota igual. La capacidad adaptativa (`sqrt(n · 2H / W)` , umbral 6) envuelve tarde o envuelve cajas enormes.\n\nHay un parche reciente (`Keep automatic root children in the first layout band`) que obliga a la raíz adaptativa a una sola fila de hijos si los niveles de abajo ya son más anchos. Evita mezclar nietos con hijos de la raíz, y **empeora** el caso estrella (un padre, muchos hijos hoja): o una fila kilométrica, o bandas globales.\n\n**Qué no es el problema:** el enrutado ortogonal de aristas, el empaquetado 2D de varias raíces, Radial, ni el compacto. Es el modelo de colocación H/V con fan-out alto."
+        }
+      ]
+    },
+    {
+      "id": "algoritmo",
+      "title": "2. Algoritmo para Vertical y Horizontal",
+      "description": "Hay que copiar la invariante del radial (cada padre posee un hueco) a rectángulos, no seguir puliendo capas globales.",
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "notePlaceholder": "Si prefieres otro algoritmo, descríbelo aquí…",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "**Recomendado: empaquetado recursivo por hueco** (el análogo rectangular del radial).\n\nInvariante, la misma que ya funciona en radial:\n\n> Cada padre recibe un rectángulo. Coloca su tarjeta en el borde de lectura (arriba en Vertical, izquierda en Horizontal). Parte ese hueco entre los hijos. Si no caben en una sola banda, envuelve **dentro del hueco**. Los descendientes no salen nunca al pasillo de otra familia.\n\nProcedimiento:\n\n1. Recorrer el árbol de **arriba abajo** con un presupuesto de ancho (Vertical) o de alto (Horizontal).\n2. Si los hijos caben en una banda, repartir el presupuesto ~ proporcional al tamaño del subárbol (como Walker, pero acotado).\n3. Si no caben, calcular columnas `ceil(presupuesto / (anchoMedioHijo + gap))`, mínimo 2, máximo el tope de banda (8 adaptativo, o el valor Fijo de la UI). Rellenar por estantes (izquierda→derecha, luego siguiente fila), **equilibrando el último estante** para no dejar un huérfano 6+1.\n4. Cada hijo hereda un sub-hueco de ese estante y se llama en recursión. El overflow crece **en profundidad de lectura** (más filas en Vertical, más columnas en Horizontal), no robando sitio al vecino.\n5. Centrar el padre sobre el bloque de hijos de la **primera** banda, no sobre toda la huella infinita.\n6. Horizontal sigue siendo `transpose()` de Vertical. **Apilar/alinear hijos de este nodo** sigue siendo capacidad 1.\n\nPor qué este y no los clásicos de literatura:\n\n| Algoritmo | Por qué no (o sí) |\n|---|---|\n| Reingold–Tilford / Walker / Buchheim | Bonito y O(n), pero N hijos = una fila de N tarjetas. Es el fallo original. |\n| Sugiyama / capas (el Nuevo actual) | Compacta altura rellenando agujeros. Mezcla familias. Eso es lo que se ve mal. |\n| Force-directed | Inestable, solapes, no ortogonal. |\n| Treemap / squarify | Compacto, pero pierde la dirección de lectura padre→hijos. |\n| Balloon / H-tree | Geometría rara para tarjetas de 180×70. |\n| ELK mrtree / Graphviz dot | Dependencia o proceso externo; peor control de determinismo y tests headless. |\n| Bus tipo org-chart Visio | Válido visualmente, pero cambia el lenguaje de las aristas (un bus). Se puede hacer después con el enrutador actual; no hace falta para colocar. |\n| **Hueco recursivo + estantes** | Es exactamente lo que Radial hace con sectores y anillos, pasado a H/V. |\n\nEl Clásico ya era de esta familia (cajas rígidas + bandas). Le faltaba el **presupuesto de píxeles que fluye hacia abajo**. Sin presupuesto, una caja nieta ancha ensancha al padre y al tío, y el diagrama se va de pantalla aunque las familias no se mezclen.\n\n**No implementes esto todavía:** primero cierra las decisiones de las secciones siguientes. El cambio vive en `BalancedOrthogonalTreeLayout` (o su sucesor), con tests de estrella 20/40/80, árbol de flujo con 7 hijos y nietos, y rama corta vs rama ancha."
+        },
+        {
+          "id": 2,
+          "text": "**Alternativa: dejar Sugiyama (Nuevo) y solo retocar.** Bajar el umbral de 6, equilibrar bandas, recortar la relajación, endurecer `automaticRootCapacity`.\n\nAbarata el parche y conserva los tests de compactación por agujeros. **No arregla el modelo:** con muchos hijos los nodos siguen compartiendo filas globales y la relajación seguirá desplazándolos. Es precisamente el comportamiento que rechazas. Solo tendría sentido si el problema fuera “una fila un poco ancha”, no “los ha metido donde no toca”."
+        }
+      ]
+    },
+    {
+      "id": "donde-implementar",
+      "title": "3. Dónde meterlo en el A/B actual",
+      "description": "El selector Clásico / Nuevo · prueba es provisional y de sesión.",
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "**Sustituir el interior de `BalancedOrthogonalTreeLayout`**, que es lo que hoy etiqueta la UI como **Nuevo · prueba**.\n\n- Clásico se queda como referencia geométrica histórica (sigue rescatando cadenas profundas si el Nuevo falla la validación).\n- Radial, compacto, incremental y el enrutador no se tocan.\n- El dispatcher `OrthogonalTreeLayout` y `LayoutEngineExperiment` se mantienen hasta que el Nuevo gane en mesa y en tests; entonces se puede borrar el A/B.\n- Hay que **reescribir** `OrthogonalLayoutRegressionSelfTest.assertAsymmetricBranchesDoNotWait`: hoy exige mezcla de profundidades, que es justo lo que queremos dejar de hacer. El nuevo contrato: la rama corta avanza en **su columna**, sin esperar a la ancha, y **sin** colarse en las bandas de la ancha.\n\nNo hace falta un tercer radio en la UI. El usuario ya está mirando “Nuevo”; hay que hacer que Nuevo se comporte."
+        },
+        {
+          "id": 2,
+          "text": "**Añadir un tercer motor** (Clásico / Nuevo / Huecos) y dejar Balanced intacto para comparar los tres.\n\nÚtil solo si quieres A/B visual lado a lado de Sugiyama contra huecos. Cuesta más UI, más tests y más tiempo con un experimento que ya ibas a tirar. No lo recomiendo: Balanced ya demostró que las capas globales no gustan."
+        }
+      ]
+    },
+    {
+      "id": "presupuesto",
+      "title": "4. Cómo decidir el wrap: píxeles o recuento de hijos",
+      "description": "Radial envuelve cuando no cabe en la circunferencia. H/V debe envolver cuando no cabe en el ancho del hueco.",
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "**Presupuesto en píxeles por hueco**, con el recuento de la UI como tope, no como único criterio.\n\n- **Adaptativa:** el hueco de la raíz apunta a un ancho cómodo `~8 · (anchoMedioTarjeta + gap)` — el mismo 8 del primer anillo radial. Cada hijo recibe una franja de ese presupuesto. Si una franja es más estrecha que la tarjeta, se envuelve a la siguiente banda **de ese padre**.\n- **Fija (spinner “Hijos por banda”):** el tope de hermanos por estante es ese número; si además el presupuesto se pasa, se envuelve antes. Nunca más hermanos en una banda que el tope fijo.\n- Equilibrar estantes (4+3, no 6+1), como ya hace `BandPlan.balanced`.\n- No usar la **huella completa del subárbol** para decidir la capacidad del padre: eso es lo que hincha el Clásico. Primero se coloca la tarjeta del hijo; el subárbol se recorta al ancho de **su** franja.\n\nEfecto buscado: 30 hojas bajo un padre → unas 4 filas de ~8, bloque razonable, padre centrado. Un hijo con 13 nietos envuelve **dentro de su columna**, y el hermano corto no se va al otro lado del lienzo."
+        },
+        {
+          "id": 2,
+          "text": "**Seguir envolviendo solo por número de hijos** (`capacidad` 6 adaptativa o el spinner).\n\nEs lo que ya hacen Clásico, Nuevo y compacto. Es simple y los tests de bandas fijas siguen valiendo tal cual. Falla cuando los “hijos” son cajas ya anchas: dos subárboles de 1700 px siguen ocupando 3500 px en una banda de capacidad 2. No arregla “ocupan mucha pantalla” en árboles reales de casos/eventos."
+        }
+      ]
+    },
+    {
+      "id": "alcance",
+      "title": "5. Alcance: qué no se toca",
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Trabajo **solo** sobre Vertical/Horizontal con ramas separadas (el camino del A/B).\n\n- Radial no se modifica: es la referencia de calidad.\n- Compacto (`reserveHorizontalSpace = false`) se deja; no es el modo que estás usando para juzgar Nuevo.\n- Incremental, zoom, enrutado Manhattan y grupos visuales no entran.\n- Sin ELK, Graphviz ni librería nueva. Determinista, headless, mismos `NodeSize` / `NodePosition`.\n- La UI de Organizar no cambia de momento (siguen Adaptativa/Fija, espaciado, orientación). Como mucho, el tooltip de **Nuevo · prueba** cuando el algoritmo nuevo esté dentro.\n- Tests a rehacer o añadir, no a “hacer pasar” relajando asserts:\n  - estrella adaptativa 20/40/80: varias bandas, sin una fila kilométrica y sin un nodo por banda;\n  - 7 hijos capacidad 6: dos bandas **locales** 4+3 bajo el padre, nietos debajo de **su** hijo;\n  - rama corta vs ancha: columnas propias, sin mezclar Y con las bandas ajenas;\n  - LEFT_RIGHT = transpose;\n  - 500 / 5000 nodos siguen bajo el tope de rendimiento.\n\nCuando esto se vea bien en mesa, se puede retirar Clásico. Hasta entonces el dispatcher de rescate se queda."
+        }
+      ]
+    }
+  ]
+}
