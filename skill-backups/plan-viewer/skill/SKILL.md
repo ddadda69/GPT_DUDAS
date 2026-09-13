@@ -19,6 +19,18 @@ Redacta primero la respuesta que sería más útil en la conversación. Después
 
 Antes de generar JSON, lee por completo `references/schema.json`. Usa `references/example.json` como ejemplo local. Cuando GitHub esté disponible, lee siempre el esquema remoto de `main` antes de publicar; el remoto es la autoridad.
 
+## URL obligatoria en la respuesta
+
+Siempre que un plan se publique y se verifique correctamente en `data/plans/<id>.json`, la respuesta al usuario **DEBE mostrar explícitamente la URL directa del Plan Viewer en ese mismo mensaje**, sin esperar a que el usuario la pida después.
+
+Formato obligatorio:
+
+`https://ddadda69.github.io/GPT_DUDAS/?plan=<id>`
+
+Usa exactamente el `id` del plan canónico publicado. La URL debe aparecer de forma visible y clicable al final de la respuesta o inmediatamente después del estado de publicación. Esta regla es obligatoria incluso para planes de ejemplo, planes simples, actualizaciones de planes existentes y cuando falle la actualización de `data/current.json` pero el archivo canónico sí se haya publicado y verificado.
+
+Si el plan no llegó a publicarse o no pudo verificarse, no muestres una URL como si el Viewer contuviera ese plan.
+
 ## Contrato actual
 
 No mantengas formatos antiguos ni discriminadores de tipo. Cada sección representa directamente una decisión.
@@ -72,7 +84,7 @@ Un plan nuevo empieza en `version: 1`. Para actualizar uno existente, lee su arc
     - si otro chat modificó `current.json`, no fuerces ni reintentes el overwrite;
     - un conflicto en `current.json` no invalida la publicación canónica del plan.
 12. Si el espejo se actualizó, vuelve a leer `data/current.json` y verifica que coincide con el plan canónico.
-13. Entrega en el chat el plan completo, indica por separado el estado del archivo canónico y de `current.json`, y termina con la URL estable `?plan=<id>`. Si el espejo se actualizó, puedes indicar también que la URL raíz muestra ese plan.
+13. Entrega en el chat el plan completo, indica por separado el estado del archivo canónico y de `current.json`, y termina siempre con la URL estable `?plan=<id>` cuando el plan canónico se haya publicado y verificado. Si el espejo se actualizó, puedes indicar también que la URL raíz muestra ese plan.
 
 ## Reglas de adaptación
 
