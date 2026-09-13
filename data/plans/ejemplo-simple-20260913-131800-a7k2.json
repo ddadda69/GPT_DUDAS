@@ -1,0 +1,28 @@
+{
+  "$schema": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
+  "id": "ejemplo-simple-20260913-131800-a7k2",
+  "version": 1,
+  "title": "Ejemplo simple: añadir modo oscuro a una aplicación",
+  "description": "Plan mínimo de ejemplo para mostrar cómo se representa una decisión sencilla en Plan Viewer.",
+  "sections": [
+    {
+      "id": "modo-oscuro",
+      "title": "1. Añadir modo oscuro",
+      "description": "La aplicación tendrá un tema oscuro seleccionable por el usuario.",
+      "defaultOption": 1,
+      "allowOther": true,
+      "allowNote": true,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "**Implementar un selector Claro / Oscuro** y guardar la elección del usuario para restaurarla al volver a abrir la aplicación. Centralizar colores y estilos en un tema común para evitar valores duplicados por pantalla."
+        },
+        {
+          "id": 2,
+          "text": "**Usar automáticamente el tema del sistema operativo**, sin añadir un selector manual. Es más simple, pero el usuario no podrá elegir un tema distinto al del sistema."
+        }
+      ]
+    }
+  ]
+}
