@@ -1,0 +1,163 @@
+{
+  "$schema": "https://ddadda69.github.io/GPT_DUDAS/data/schema.json",
+  "id": "gymnazio-movil-20260915225256-g7p3",
+  "version": 1,
+  "title": "GYMNAZIO · Especificación funcional: perfil preparado y dificultad ajustable",
+  "description": "**Primera versión para un único perfil preconfigurado:** abrir la URL, empezar en uno o dos toques y ajustar la dificultad por ejercicio. La incorporación de formularios y personalización para otros perfiles queda para una ampliación posterior.\n\nEsta copia pública contiene requisitos del producto. La configuración personal se conserva en el documento local.",
+  "sections": [
+    {
+      "id": "acceso",
+      "title": "1. Un perfil preparado",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "- Perfil, material, días y tiempos preparados antes del primer acceso.\n- Primera entrada con Google y acceso directo a Hoy, sin cuestionario de personalización general.\n- Acceso restringido a cuentas invitadas, comprobado en el servidor.\n- Sesión iniciada mientras siga siendo válida e instalación opcional en la pantalla de inicio.\n- Preferencias y disponibilidad editables en ajustes.\n\nLa estructura de datos permitirá incorporar perfiles más adelante. La primera versión no incluirá todavía el formulario ni el motor general de personalización."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "navegacion",
+      "title": "2. Hoy, Semana, Programas y Progreso",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "| Sección | Función |\n|---|---|\n| **Hoy** | Sesión prevista, continuar lo pendiente y favoritos. |\n| **Semana** | Lunes a domingo, mover una sesión y elegir rutina. |\n| **Programas** | Sesiones por Casa/Gym, tiempo y material; biblioteca de ejercicios. |\n| **Progreso** | Constancia, técnica aprendida y nivel de cada ejercicio. |\n\nLa URL general abrirá Hoy. Un enlace directo conservará su destino incluso tras el login. Si dejó una sesión a medias, verá «Continuar» con ejercicio y serie; al volver otro día también tendrá disponible lo de hoy.\n\n**Inicio:** sesión grande con «Empezar», «Tengo poco tiempo» y «Elegir otra sesión». Selector Casa/Gym visible, perfil en el avatar y navegación inferior con el pulgar. Cada sección recordará filtros y posición. Cambiar la sesión de hoy no cambiará toda la semana."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "diseno",
+      "title": "3. Diseño y pruebas móviles",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "**Fondo marfil, texto grafito y acentos verde salvia**, modo oscuro, tipografía grande, bocetos limpios y botones de unos 48 px.\n\nTarjetas que se amplían, paneles inferiores y transiciones de unos 150–220 ms. Gestos con botones equivalentes, Atrás previsible, contraste, lector de pantalla y respeto a la preferencia de reducir animaciones.\n\nPruebas prioritarias en **Android con Chrome y Samsung Internet**: URL normal, acceso desde pantalla de inicio, regreso de YouTube, bloqueo/desbloqueo, teclado y uso con una mano. Diseño adaptable y comprobaciones básicas en Safari.\n\nDurante la sesión se verán el dibujo, la indicación y el siguiente paso. Carga ligera y anticipación del próximo ejercicio."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "rutinas",
+      "title": "4. Semana flexible y variantes accesibles",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Tres piezas: **rutinas** —organización semanal—, **sesiones** —lo de hoy— y **ejercicios** —cada movimiento—.\n\nProgramas previstos: **Inicio en casa A/B**, **Tengo 10 minutos**, **Bici estática**, **Práctica de técnica** y **Inicio en gimnasio**. La versión breve conservará la preparación necesaria.\n\nLa vista semanal permitirá asignar sesiones, descansos y actividad opcional a lunes–domingo. Mover una sesión no acumulará trabajo ni duplicará entrenamientos pendientes. Frecuencia, duración, series y cargas serán configurables.\n\nEl peso mínimo disponible no será el nivel inicial obligatorio: habrá variantes sin carga o más sencillas cuando corresponda. El agarre a dos manos será una variante explícita, nunca una conversión automática de cualquier ejercicio.\n\nLa ficha distinguirá peso de cada mancuerna, número de unidades y agarre. Tener material disponible no obliga a utilizarlo. El paso a gimnasio conservará historial y hábitos, con variantes revisadas para el nuevo material."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "ejercicios",
+      "title": "5. Fichas y sesión guiada",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Cada ficha incluirá **nombre sencillo, boceto de inicio/final con flechas, dos o tres instrucciones, series o tiempo, descanso, un error frecuente, variante más fácil y enlace a YouTube**. El dibujo reflejará exactamente el agarre, apoyo y material de la variante elegida.\n\nEn entrenamiento aparecerá un ejercicio cada vez: «Serie hecha», «Descansar», «Pausar» y «Cambiar ejercicio». Debajo estará el control de dificultad del siguiente apartado. El temporizador podrá pausarse y el paso al siguiente ejercicio será explícito.\n\nGuardado tras cada serie, recuperación al recargar o volver de YouTube y recálculo del descanso al desbloquear el móvil. Mantener la pantalla encendida será opcional y dependerá del navegador y del ahorro de batería. [Referencia técnica](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API).\n\nLos bocetos serán propios, preferiblemente vectoriales, con texto alternativo y revisión de posturas y flechas. La versión breve de una instrucción no sustituirá la explicación completa disponible."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "dificultad",
+      "title": "6. «Muy fácil / Bien / Muy difícil»: ajustar en dos toques",
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true,
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "**Función principal al terminar cada serie.**\n\n| Control | Respuesta |\n|---|---|\n| **Muy fácil** | Proponer un pequeño aumento permitido, mostrarlo y aplicarlo a la siguiente serie con un toque adicional. |\n| **Bien** | Mantener la propuesta y guardar la valoración. |\n| **Muy difícil** | Proponer menos repeticiones, menos carga o una variante más fácil. |\n| **Me molesta** | Pausar y permitir registrar lo ocurrido; no interpretarlo como simple falta de fuerza. |\n\nEjemplo de interfaz, no pauta de ejercicio: «Muy fácil» → «Un pequeño aumento de repeticiones con la misma carga» → **Aplicar**. Dos toques y opción de deshacer.\n\nCada ejercicio tendrá una secuencia de niveles revisados. El orden de cambios —repeticiones, apoyo, variante o carga— será específico del movimiento y cambiará una sola variable cada vez. Una variante nueva mostrará dibujo e instrucciones antes de iniciarse.\n\nNo se saltará automáticamente al siguiente peso disponible si el aumento es excesivo. Habrá un único ajuste por serie completada y límites por sesión, evitando acumular cambios por pulsaciones repetidas.\n\nSubir requerirá confirmar control técnico y ausencia de molestias nuevas. La app no puede comprobar la técnica por sí sola. Si no existe un siguiente nivel revisado adecuado al material y límites configurados, mantendrá el actual.\n\nEl nivel se recordará **por ejercicio y variante**, incluyendo peso, número de mancuernas, agarre y apoyo. El cambio afectará a la próxima serie, manteniendo intacto el registro de las anteriores. La próxima sesión tendrá en cuenta valoración y respuesta posterior.\n\nLa progresión usará reglas claras y contenido revisado; la generación de planes para otros perfiles se reserva para una ampliación."
+        }
+      ]
+    },
+    {
+      "id": "videos",
+      "title": "7. Biblioteca pequeña y vídeos elegidos",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Primera biblioteca de unas **15–20 fichas**, contando variantes útiles para el programa y ampliándola al pasar al gimnasio.\n\n| Canal | Uso | Primer candidato localizado |\n|---|---|---|\n| **Fisioterapia a tu alcance · Marcos Sacristán** | Explicaciones visuales básicas | [Sentadilla](https://www.youtube.com/watch?v=GoAauG0_Vh0) |\n| **PowerExplosive** | Técnica con mancuernas y material de gimnasio | [Remo con mancuerna a una mano](https://www.youtube.com/watch?v=uV-mE3rT7g4) |\n\nLos enlaces y autoría están localizados; queda revisar íntegramente cada vídeo, su reproducción y la coincidencia con la variante. Son candidatos de biblioteca, no una indicación clínica individual.\n\nCada ficha tendrá autor, enlace y variante comprobados. YouTube se abrirá solo al pedirlo, conservando la sesión. Dibujo e instrucciones seguirán disponibles sin vídeo; la reproducción requerirá conexión."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "adaptacion",
+      "title": "8. Límites y seguimiento",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Cada programa permitirá configurar restricciones y límites de progresión. El contenido se revisará antes de incorporarlo al catálogo; percibir poco esfuerzo no será el único criterio para aumentar dificultad.\n\nRegistro opcional de sensaciones antes/después y valoración final «Fácil / Bien / Demasiado». El progreso destacará constancia, aprendizaje y fuerza. La introducción de nuevas variantes y el cambio de etapa serán explícitos; la app no aumentará peso por calendario.\n\nLa función «Me molesta» pausará el ejercicio y permitirá revisar la pauta, sin asignar automáticamente otro movimiento ni emitir diagnósticos. La app seguirá los límites configurados y permitirá consultar indicaciones profesionales de forma privada.\n\nEste apartado define comportamientos del producto y no contiene registros personales."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "tecnologia",
+      "title": "9. Tecnología, privacidad y guardado",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "**React + TypeScript + Vite**, con PWA para añadirla al móvil y guardar recursos. [Vite](https://vite.dev/guide/).\n\n| Pieza | Propuesta |\n|---|---|\n| Google | Supabase Auth, acceso privado y retorno a la sección solicitada. |\n| Datos | PostgreSQL en Supabase: perfil preparado, rutinas, sesiones, series, variantes y valoraciones. |\n| Animación | CSS y View Transitions cuando estén disponibles, con alternativa compatible. |\n| Sin conexión | Sesiones y dibujos guardados, registro local y sincronización al volver la red. |\n| Publicación | HTTPS y distribución rápida de archivos; comprobar Google al cerrar el proveedor. |\n\nEl acceso con Google requiere configurar dominios y redirecciones. [Documentación](https://supabase.com/docs/guides/auth/social-login/auth-google). Las transiciones se incorporarán con mejora progresiva. [Referencia](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API).\n\nInvitaciones verificadas en servidor, claves privadas protegidas y políticas de acceso por usuario. Notas personales opcionales y borrables; limpieza de la copia local al cerrar sesión. El panel de gestión editará contenido y niveles revisados; compartir el historial será decisión de la persona usuaria. [Políticas de datos](https://supabase.com/docs/guides/database/postgres/row-level-security).\n\nCada sesión conservará la versión de la rutina con la que empezó. Sin conexión, se guardarán avances y se evitarán duplicados al sincronizar. Los conflictos entre dispositivos se resolverán de forma visible. Login inicial y vídeos necesitarán red. [Funcionamiento sin conexión](https://web.dev/learn/pwa/service-workers)."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "entregas",
+      "title": "10. Entregas y comprobaciones",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "1. **Experiencia móvil:** Hoy, Semana, Programas, fichas y ajuste rápido de dificultad, con datos de ejemplo identificados.\n2. **App funcional:** Google, perfil preparado, rutina semanal, entrenamiento, guardado y recuperación.\n3. **Contenido y adaptación:** bocetos, vídeos, niveles revisados, temporizadores, funcionamiento sin conexión y progreso.\n4. **Uso real y gimnasio:** pruebas en el móvil de uso, panel de edición y variantes para la siguiente etapa.\n\nCriterios de finalización:\n\n- Empezar hoy o un favorito en uno o dos toques tras el login.\n- Ajustar un ejercicio fácil o difícil en dos toques, con propuesta visible y posibilidad de deshacer.\n- Ofrecer variantes sin carga cuando corresponda y respetar el agarre de cada ejercicio.\n- Evitar saltos automáticos excesivos de carga, cambios acumulados por doble pulsación y progresión ante molestias nuevas.\n- Mover sesiones sin alterar toda la semana y conservar las series al volver de YouTube, recargar o perder conexión.\n- Tener dibujos, instrucciones y vídeos revisados; recordar el nivel por ejercicio.\n- Verificar acceso privado, guardado y sincronización.\n- Probar en Android con Chrome y Samsung Internet, además de accesibilidad y compatibilidad adaptable básica.\n- Medir como objetivos: contenido principal visible en **2,5 s o menos**, respuesta a interacción de **200 ms o menos** y estabilidad visual. Todavía no son resultados medidos. [Criterios de Google](https://web.dev/articles/vitals)."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true
+    },
+    {
+      "id": "cierre",
+      "title": "11. Configuración y ampliación futura",
+      "options": [
+        {
+          "id": 1,
+          "recommended": true,
+          "text": "Antes de implementar se completará la configuración privada del perfil: límites de ejercicio, disponibilidad y material. El acceso real requiere cuenta invitada, URL y configuración de Google y del servicio de datos.\n\nAntes de contratar servicios de pago se concretará el coste de dominio, alojamiento y datos, sin asumir gratuidad permanente.\n\n**Primera versión: perfil ya preparado y dificultad ajustable por ejercicio.** Más adelante podrán añadirse formularios y perfiles personalizados. La prioridad actual será empezar, entender cada movimiento, ajustar el esfuerzo y retomar sin complicaciones."
+        }
+      ],
+      "defaultOption": 1,
+      "allowOther": false,
+      "allowNote": true
+    }
+  ]
+}
